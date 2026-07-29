@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jhora 星盘清洗工具</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔮</text></svg>" />
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>✦ Jhora 星盘清洗工具</h1>
+            <div class="header-actions">
+                <button class="btn btn-gold-outline" onclick="openTutorialModal()">📘 教程</button>
+                <button class="btn btn-gold-outline" onclick="openGlossaryModal()">🔍 星体说明</button>
+            </div>
+        </header>
+
+        <div class="paste-grid">
+            <div class="paste-box">
+                <div class="label">📋 完整全盘计算文本</div>
+                <div class="step-hint">Edit → Copy complete calculations<br />提取出生信息 + D1星体列表，丢弃网格</div>
+                <textarea id="pasteFull" placeholder="粘贴完整全盘文本…"></textarea>
+                <div class="paste-actions">
+                    <button class="btn btn-primary btn-sm" onclick="cleanSingle('full')">清洗本段</button>
+                    <button class="btn btn-danger btn-sm" onclick="clearPaste('full')">清空</button>
+                </div>
+            </div>
+            <div class="paste-box">
+                <div class="label">📐 单分盘经度星体文本</div>
+                <div class="step-hint">右键→choose the divisional chart for longitudes→复制<br />粘贴一个分盘（D1、D9、D10…），自动识别，多次粘贴自动累加</div>
+                <textarea id="pasteDivisional" placeholder="粘贴单分盘文本…"></textarea>
+                <div class="paste-actions">
+                    <button class="btn btn-primary btn-sm" onclick="cleanSingle('divisional')">清洗本段（累加）</button>
+                    <button class="btn btn-danger btn-sm" onclick="clearPaste('divisional')">清空</button>
+                </div>
+            </div>
+            <div class="paste-box">
+                <div class="label">⏳ Vimsottari 大运/小运</div>
+                <div class="step-hint">Dasas 菜单逐层复制，多次追加粘贴，自动合并去重</div>
+                <textarea id="pasteDasha" placeholder="粘贴大运时间线（可多次追加）…"></textarea>
+                <div class="paste-actions">
+                    <button class="btn btn-primary btn-sm" onclick="cleanSingle('dasha')">清洗本段</button>
+                    <button class="btn btn-danger btn-sm" onclick="clearPaste('dasha')">清空</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="mergeAndGenerate()">⚡ 合并生成</button>
+            <button class="btn btn-gold-outline" onclick="openFilterModal()">🎯 筛选设置</button>
+            <button class="btn btn-gold-outline" onclick="copyAndShowModal()">📋 复制成品</button>
+            <button class="btn btn-gold-outline" onclick="exportTxt()">⬇️ 导出TXT</button>
+            <button class="btn btn-gold-outline" onclick="openHistoryModal()">📜 历史 <span class="history-count" id="historyBadge"></span></button>
+            <span style="font-size:12px;color:#5a6373;margin-left:4px;">Ctrl+Enter</span>
+            <span class="spacer"></span>
+            <span class="badge" id="modeBadge">极简模式已启用</span>
+        </div>
+
+        <div class="output-area">
+            <textarea id="outputText" readonly placeholder="标准化星盘文本将在此显示…"></textarea>
+        </div>
+
+        <div class="footer">
+            <strong>📄 重要说明：</strong> 框1仅提供出生信息和D1星体列表，框2支持多次粘贴不同分盘自动累加；同类型分盘新粘贴会覆盖旧数据。本工具不解析网格图形。
+        </div>
+    </div>
+
+    <!-- ===== 弹窗 教程 ===== -->
+    <div class="modal-overlay" id="tutorialModal">
+        <div class="modal-box" style="max-width:700px;">
+            <button class="close-btn" onclick="closeModal('tutorialModal')">✕</button>
+            <h3>📘 Jhora 入门指南</h3>
+            <div class="sub">下载 · 出生信息填写 · 数据源黄金法则</div>
+            <div class="tutorial-body">
+                <div class="section">
+                    <div class="st">▸ 官方下载 &amp; 安装</div>
+                    <ol>
+                        <li>搜索 <span class="inline-code">Jagannatha Hora official download</span></li>
+                        <li>进入开发者官网（<strong>仅官网安全</strong>，拒绝第三方下载站）</li>
+                        <li>选择 Windows / MacOS 版本下载</li>
+                        <li>安装：Windows 右键管理员运行；Mac 允许未知来源</li>
+                    </ol>
+                </div>
+                <div class="section">
+                    <div class="st">▸ Birthdata 出生信息对照</div>
+                    <div class="grid-2">
+                        <div class="field-item"><strong>Birthdate</strong> 月/日/年 · 公历</div>
+                        <div class="field-item"><strong>Birthtime</strong> 时/分/秒 · 24小时制</div>
+                        <div class="field-item"><strong>Gender</strong> Male男 / Female女</div>
+                        <div class="field-item"><strong>City name</strong> 美国选 USA，其他国家选 Rest of World</div>
+                    </div>
+                    <div class="highlight-box">
+                        ⚡ 城市搜索后 <strong>时区、经度、纬度</strong> 自动填充，一般无需修改。
+                    </div>
+                </div>
+                <div class="section">
+                    <div class="st">⚠️ 数据源黄金法则</div>
+                    <div class="highlight-box" style="border-left-color:#d4a0a0;">
+                        AI 无法识别星盘网格图和 PDF 截图。<br />
+                        <strong>务必使用</strong> <span class="inline-code">右键 → Copy to clipboard</span> 复制带度数的文本列表（即粘贴框2）。<br />
+                        本工具 <strong>不支持、不解析</strong> 任何表格/图片。
+                    </div>
+                </div>
+                <div style="margin-top:8px;padding:8px 12px;background:#1a232f;border-radius:6px;font-size:13px;color:#c8ccd4;">
+                    💡 可在软件中 <span class="inline-code">右击 → Select the bodies to show</span> 预先隐藏多余星体，减少冗余。
+                </div>
+                <div style="margin-top:12px;padding:8px 12px;background:#0f1620;border-radius:6px;font-size:12px;color:#7a8392;border-left:2px solid #b8943c;">
+                    📄 Jhora PDF 导出：File → Print → Save as PDF（仅用于存档，AI无法解析PDF中的星盘图）
+                </div>
+            </div>
+            <div style="margin-top:16px;text-align:right;">
+                <button class="btn btn-primary" onclick="closeModal('tutorialModal')">我知道了</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 弹窗 筛选设置 ===== -->
+    <div class="modal-overlay" id="filterModal">
+        <div class="modal-box">
+            <button class="close-btn" onclick="closeModal('filterModal')">✕</button>
+            <h3>🎯 自定义筛选</h3>
+            <div class="sub">选择需要保留的星体、虚点、大运层级</div>
+            <div class="preset-row">
+                <span class="label">预设：</span>
+                <button class="btn btn-gold-outline btn-sm active-preset" id="presetMinimal" onclick="applyPreset('minimal')">极简AI模式</button>
+                <button class="btn btn-gold-outline btn-sm" id="presetPro" onclick="applyPreset('pro')">深度专业模式</button>
+                <button class="btn btn-danger btn-sm" onclick="resetAllFilters()">重置全部</button>
+            </div>
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <div class="fg-title">⭐ 基础星体 <span class="hint">（核心，不可取消）</span></div>
+                    <div class="fg-items">
+                        <label class="disabled"><input type="checkbox" checked disabled /> Planets (9大星)</label>
+                        <label><input type="checkbox" id="fOuter" /> 外行星 (天王/海王/冥王)</label>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <div class="fg-title">🌀 辅助 Lagna <span class="hint">（可选）</span></div>
+                    <div class="fg-items">
+                        <label><input type="checkbox" id="fBhava" /> Bhava/Hora/Ghati</label>
+                        <label><input type="checkbox" id="fVighati" /> Vighati</label>
+                        <label><input type="checkbox" id="fVarnada" /> Varnada</label>
+                        <label><input type="checkbox" id="fSree" /> Sree</label>
+                        <label><input type="checkbox" id="fPranapada" /> Pranapada</label>
+                        <label><input type="checkbox" id="fIndu" /> Indu</label>
+                        <label><input type="checkbox" id="fBhrigu" /> Bhrigu Bindu</label>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <div class="fg-title">🌑 虚星 Upagrahas</div>
+                    <div class="fg-items">
+                        <label><input type="checkbox" id="fMandi" /> Mandi</label>
+                        <label><input type="checkbox" id="fGulika" /> Gulika</label>
+                        <label><input type="checkbox" id="fOtherUpagraha" /> Other</label>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <div class="fg-title">📊 Sphuta 数据</div>
+                    <div class="fg-items">
+                        <label><input type="checkbox" id="fSphutaPrasna" /> Prasna Marga</label>
+                        <label><input type="checkbox" id="fSphutaYoga" /> Yoga / Avayoga</label>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <div class="fg-title">🏹 阿鲁达 Arudha</div>
+                    <div class="fg-items">
+                        <label><input type="checkbox" id="fArudhaLagna" /> Arudha Lagna</label>
+                        <label><input type="checkbox" id="fBhavaArudha" /> Bhava Arudha</label>
+                        <label><input type="checkbox" id="fGrahaArudha" /> Graha Arudha</label>
+                        <label><input type="checkbox" id="fVarnadas" /> Varnadas</label>
+                        <label><input type="checkbox" id="fKunda" /> Kunda</label>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <div class="fg-title">⏳ 大运层级</div>
+                    <div class="fg-items">
+                        <label class="disabled"><input type="checkbox" checked disabled /> MD 主大运</label>
+                        <label><input type="checkbox" id="fAD" /> AD 次大运</label>
+                        <label><input type="checkbox" id="fPratyantardasa" /> 小小运</label>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top:16px;text-align:right;display:flex;gap:10px;justify-content:flex-end;">
+                <button class="btn" onclick="closeModal('filterModal')">取消</button>
+                <button class="btn btn-primary" onclick="closeModal('filterModal')">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 弹窗 AI 跳转 ===== -->
+    <div class="modal-overlay" id="aiModal">
+        <div class="modal-box" style="max-width:520px;">
+            <button class="close-btn" onclick="closeModal('aiModal')">✕</button>
+            <h3>🤖 选择 AI 平台</h3>
+            <div class="sub">文本已复制，点击平台直达官网，粘贴即可解读</div>
+            <div class="modal-platforms">
+                <button class="btn" onclick="openAI('chatgpt')">ChatGPT</button>
+                <button class="btn" onclick="openAI('deepseek')">DeepSeek</button>
+                <button class="btn" onclick="openAI('gemini')">Gemini</button>
+                <button class="btn" onclick="openAI('claude')">Claude</button>
+            </div>
+            <div style="margin:12px 0 14px;">
+                <div style="font-size:13px;color:#d0d4dc;margin-bottom:4px;">🎯 生成专属提问话术</div>
+                <div class="prompt-checkboxes">
+                    <label><input type="checkbox" id="promptAll" checked /> 全盘</label>
+                    <label><input type="checkbox" id="promptCareer" /> 事业</label>
+                    <label><input type="checkbox" id="promptMarriage" /> 婚姻</label>
+                    <label><input type="checkbox" id="promptDasha" /> 大运</label>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="btn btn-primary btn-sm" onclick="generatePrompt()">📝 生成并复制</button>
+                    <button class="btn btn-gold-outline btn-sm" onclick="copyDefaultPrompt()">📋 默认话术</button>
+                </div>
+            </div>
+            <div style="text-align:right;">
+                <button class="btn btn-danger" onclick="closeModal('aiModal')">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 弹窗 历史记录 ===== -->
+    <div class="modal-overlay" id="historyModal">
+        <div class="modal-box">
+            <button class="close-btn" onclick="closeModal('historyModal')">✕</button>
+            <h3>📜 清洗历史 <span class="history-count" id="historyCount"></span></h3>
+            <div class="sub">点击任意记录可恢复到输出区 · 最多保存20条</div>
+            <div id="historyList"></div>
+            <div style="margin-top:12px;display:flex;gap:10px;justify-content:flex-end;">
+                <button class="btn btn-danger btn-sm history-clear-all" onclick="clearAllHistory()">🗑 清空全部</button>
+                <button class="btn btn-primary" onclick="closeModal('historyModal')">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 弹窗 星体说明 ===== -->
+    <div class="modal-overlay" id="glossaryModal">
+        <div class="modal-box" style="max-width:640px;">
+            <button class="close-btn" onclick="closeModal('glossaryModal')">✕</button>
+            <h3>🔍 星体说明</h3>
+            <div class="sub">筛选面板中各选项的含义与适用场景</div>
+            <div class="glossary-group">
+                <div class="g-title">⭐ 基础星体</div>
+                <div class="g-item"><strong>9大行星</strong>（日月金木水火土罗计）— 核心解读基础，<span class="tag">永远保留</span></div>
+                <div class="g-item"><strong>外行星</strong>（天王/海王/冥王）— 世代影响，<span class="tag">进阶分析可选</span></div>
+            </div>
+            <div class="glossary-group">
+                <div class="g-title">🌀 辅助 Lagna</div>
+                <div class="g-item">Bhava/Hora/Ghati Lagna 等 — 用于特定事件分析（职业、财富、健康），<span class="tag">新手可不选</span></div>
+            </div>
+            <div class="glossary-group">
+                <div class="g-title">🌑 虚星 Upagrahas</div>
+                <div class="g-item">Mandi、Gulika 等 — 部分流派使用的特殊计算点，<span class="tag">一般可不选</span></div>
+            </div>
+            <div class="glossary-group">
+                <div class="g-title">📊 Sphuta 数据</div>
+                <div class="g-item">Prasna Marga、Yoga Sphuta 等 — 用于特定组合分析，<span class="tag">新手可不选</span></div>
+            </div>
+            <div class="glossary-group">
+                <div class="g-title">🏹 Arudha 系列</div>
+                <div class="g-item"><strong>Arudha Lagna</strong> — 反映社会形象和物质显现，<span class="tag">进阶可选</span></div>
+                <div class="g-item">其他 Arudha — 深度分析用，<span class="tag">新手可不选</span></div>
+            </div>
+            <div class="glossary-group">
+                <div class="g-title">⏳ 大运层级</div>
+                <div class="g-item"><strong>MD 主大运</strong> — 人生主框架，<span class="tag">必留</span></div>
+                <div class="g-item"><strong>AD 次大运</strong> — 看细运时开启</div>
+                <div class="g-item"><strong>Pratyantardasa 小小运</strong> — 看流年流月时开启，<span class="tag">极少用</span></div>
+            </div>
+            <div style="margin-top:12px;text-align:right;">
+                <button class="btn btn-primary" onclick="closeModal('glossaryModal')">知道了</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Toast ===== -->
+    <div class="toast" id="toast"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
