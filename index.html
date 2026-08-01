@@ -45,6 +45,15 @@
                     <button class="btn btn-danger btn-sm" onclick="clearPaste('dasha')">清空</button>
                 </div>
             </div>
+            <div class="paste-box">
+                <div class="label">🌙 当前过运（Gochara/Transit）</div>
+                <div class="step-hint">Transit 菜单 → 复制当前过运表格<br />行星名称 + 过运宫位，用于精确时间窗口判断</div>
+                <textarea id="pasteTransit" placeholder="粘贴 Transit 表格数据…"></textarea>
+                <div class="paste-actions">
+                    <button class="btn btn-primary btn-sm" onclick="cleanSingle('transit')">清洗本段</button>
+                    <button class="btn btn-danger btn-sm" onclick="clearPaste('transit')">清空</button>
+                </div>
+            </div>
         </div>
 
         <div class="action-bar">
