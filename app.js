@@ -1,3 +1,6 @@
+// ================================================================
+// ===== 工具函数 =====
+// ================================================================
 function showToast(msg) {
     const t = document.getElementById('toast');
     t.textContent = msg;
@@ -14,6 +17,7 @@ function getPasteEl(type) {
     if (type === 'full') return document.getElementById('pasteFull');
     if (type === 'divisional') return document.getElementById('pasteDivisional');
     if (type === 'dasha') return document.getElementById('pasteDasha');
+    if (type === 'transit') return document.getElementById('pasteTransit');
     return null;
 }
 
@@ -135,6 +139,7 @@ function cleanSingle(type) {
     if (!raw) { showToast('⚠️ 粘贴框为空'); return; }
     const filters = getFilterState();
     const parser = window.JhoraParser;
+
     try {
         if (type === 'full') {
             const birth = parser.extractBirthInfo(raw);
@@ -152,7 +157,10 @@ function cleanSingle(type) {
             const result = parts.join('\n\n') || '（未检测到有效数据）';
             el.value = result;
             showToast('✅ 清洗本段完成');
-        } else if (type === 'divisional') {
+            return;
+        }
+
+        if (type === 'divisional') {
             const originalAllText = el.value;
             const newBlocks = parser.extractBodyLongitudeBlocks(raw);
             let newBlockMap = {};
@@ -186,14 +194,35 @@ function cleanSingle(type) {
             const finalText = outputChunks.join('\n\n');
             el.value = finalText;
             showToast(`✅ 已追加分盘，当前共${sortedTypes.length}个分盘`);
-        } else if (type === 'dasha') {
+            return;
+        }
+
+        if (type === 'dasha') {
             const tree = parser.parseDashaBlocks(raw);
             const merged = parser.mergeDashaTrees([tree]);
             const dashaStr = parser.serializeDashaTree(merged, filters);
             const result = '=== Vimsottari 大运 ===\n' + (dashaStr || '（未检测到大运数据）');
             el.value = result;
             showToast('✅ 清洗本段完成');
+            return;
         }
+
+        if (type === 'transit') {
+            const transitData = parser.parseTransitData(raw);
+            if (Object.keys(transitData).length === 0) {
+                showToast('⚠️ 未识别到 Transit 数据，请检查格式');
+                return;
+            }
+            let lines = ['=== 当前过运 (Gochara) ==='];
+            for (const [planet, data] of Object.entries(transitData)) {
+                const goodTag = data.good ? ' (吉)' : '';
+                lines.push(`${planet}: 第${data.house}宫${goodTag}`);
+            }
+            el.value = lines.join('\n');
+            showToast(`✅ 已解析 ${Object.keys(transitData).length} 颗行星的过运数据`);
+            return;
+        }
+
     } catch (e) {
         showToast('⚠️ 清洗出错: ' + e.message);
         console.error(e);
@@ -207,14 +236,18 @@ function mergeAndGenerate() {
     const full = document.getElementById('pasteFull').value;
     const div = document.getElementById('pasteDivisional').value;
     const dasha = document.getElementById('pasteDasha').value;
-    if (!full && !div && !dasha) {
+    const transit = document.getElementById('pasteTransit').value;
+
+    if (!full && !div && !dasha && !transit) {
         showToast('⚠️ 请至少粘贴一个输入框的内容');
         return;
     }
+
     const filters = getFilterState();
     const parser = window.JhoraParser;
+
     try {
-        const result = parser.mergeAll(full, div, dasha, filters);
+        const result = parser.mergeAll(full, div, dasha, transit, filters);
         document.getElementById('outputText').value = result;
         saveHistory(result);
         updateHistoryBadge();
@@ -482,6 +515,7 @@ window.JhoraParser = {
         }
         return birthLines.join('\n').trim();
     },
+
     extractBodyLongitudeBlocks: function(text) {
         const lines = text.split('\n');
         const blocks = [];
@@ -526,6 +560,7 @@ window.JhoraParser = {
         }
         return blocks;
     },
+
     detectDivisionalType: function(headerText) {
         const match = headerText.match(/\(in\s+D-(\d+)/i);
         if (match) return 'D' + match[1];
@@ -537,6 +572,7 @@ window.JhoraParser = {
         if (/Saptamsa/i.test(headerText)) return 'D7';
         return 'D1';
     },
+
     filterBodyList: function(lines, filters) {
         const excludeKeywords = [
             'Sphuta', 'Tithi', 'Yoga', 'Avayoga',
@@ -616,6 +652,7 @@ window.JhoraParser = {
         }
         return keep;
     },
+
     parseDashaBlocks: function(text) {
         const blocks = text.split(/(?=Vimsottari Dasa:)/i).filter(s => s.trim().length > 0);
         const result = { mdMap: {} };
@@ -631,7 +668,6 @@ window.JhoraParser = {
                 const trimmed = line.trim();
                 if (!trimmed) continue;
 
-                // ---- 检测段落标题 ----
                 if (/Maha Dasas:/i.test(trimmed)) {
                     inMaha = true;
                     inAntar = false;
@@ -642,7 +678,6 @@ window.JhoraParser = {
                     inAntar = true;
                     inMaha = false;
                     inPraty = false;
-                    // 下一行开始是 AD 列表
                     continue;
                 }
                 if (/Pratyantardasas in this AD:/i.test(trimmed)) {
@@ -652,12 +687,8 @@ window.JhoraParser = {
                     continue;
                 }
 
-                // ---- 解析行 ----
-                let mdMatch, adMatch, pdMatch;
-
-                // 1. 尝试匹配显式 MD: 或 AD: 格式（兼容旧格式）
                 if (!inMaha && !inAntar && !inPraty) {
-                    mdMatch = trimmed.match(/^([A-Za-z]+)\s+MD:\s+([\d-]+)\s+\(.*?\)\s*-\s*([\d-]+)\s+\(.*?\)/);
+                    let mdMatch = trimmed.match(/^([A-Za-z]+)\s+MD:\s+([\d-]+)\s+\(.*?\)\s*-\s*([\d-]+)\s+\(.*?\)/);
                     if (mdMatch) {
                         const name = mdMatch[1];
                         const start = mdMatch[2];
@@ -672,7 +703,7 @@ window.JhoraParser = {
                         inPraty = false;
                         continue;
                     }
-                    adMatch = trimmed.match(/^([A-Za-z]+)\s+AD:\s+([\d-]+)\s+\(.*?\)\s*-\s*([\d-]+)\s+\(.*?\)/);
+                    let adMatch = trimmed.match(/^([A-Za-z]+)\s+AD:\s+([\d-]+)\s+\(.*?\)\s*-\s*([\d-]+)\s+\(.*?\)/);
                     if (adMatch && currentMD) {
                         const name = adMatch[1];
                         const start = adMatch[2];
@@ -686,7 +717,6 @@ window.JhoraParser = {
                     }
                 }
 
-                // 2. 在 Maha Dasas 段落中，行格式为 "Sun: 2026-03-05 ..." （无 MD:）
                 if (inMaha) {
                     const match = trimmed.match(/^([A-Za-z]+):\s+([\d-]+)\s+\(.*?\)\s*-\s*([\d-]+)\s+\(.*?\)/);
                     if (match) {
@@ -696,12 +726,10 @@ window.JhoraParser = {
                         if (!result.mdMap[name]) {
                             result.mdMap[name] = { start, end, adMap: {} };
                         }
-                        // 注意：不改变 currentMD，因为这里只是总览，不设上下文
                         continue;
                     }
                 }
 
-                // 3. 在 Antardasas 段落中，行格式为 "  Sun: 2026-03-05 ..." （无 AD:）
                 if (inAntar) {
                     const match = trimmed.match(/^([A-Za-z]+):\s+([\d-]+)\s+\(.*?\)\s*-\s*([\d-]+)\s+\(.*?\)/);
                     if (match && currentMD) {
@@ -716,7 +744,6 @@ window.JhoraParser = {
                     }
                 }
 
-                // 4. 在 Pratyantardasas 段落中，行格式为 "   Sun: 2026-03-05 ..."
                 if (inPraty) {
                     const match = trimmed.match(/^([A-Za-z]+):\s+([\d-]+)\s+\(.*?\)\s*-\s*([\d-]+)\s+\(.*?\)/);
                     if (match && currentAD && currentMD) {
@@ -727,13 +754,11 @@ window.JhoraParser = {
                         continue;
                     }
                 }
-
-                // 5. 如果以上都没匹配，但行首是行星名且包含日期，可能是独立 MD（例如 Moola Dasa 或其它，但我们只处理 Vimsottari）
-                //    暂时忽略，避免误判。
             }
         }
         return result;
     },
+
     mergeDashaTrees: function(trees) {
         const merged = { mdMap: {} };
         for (const tree of trees) {
@@ -758,6 +783,7 @@ window.JhoraParser = {
         }
         return merged;
     },
+
     serializeDashaTree: function(tree, filters) {
         const lines = [];
         const showAD = filters.ad;
@@ -781,6 +807,7 @@ window.JhoraParser = {
         }
         return lines.join('\n');
     },
+
     extractDashaFromFull: function(text) {
         const lines = text.split('\n');
         let dashaLines = [];
@@ -796,8 +823,69 @@ window.JhoraParser = {
         }
         return dashaLines.join('\n');
     },
-    mergeAll: function(fullText, divText, dashaText, filters) {
+
+    // ================================================================
+    // 解析 Transit/Gochara 数据
+    // ================================================================
+    parseTransitData: function(text) {
+        const lines = text.split('\n');
+        const result = {};
+
+        const planetMap = {
+            'Sun': '太阳',
+            'Moon': '月亮',
+            'Mars': '火星',
+            'Mercury': '水星',
+            'Jupiter': '木星',
+            'Venus': '金星',
+            'Saturn': '土星',
+            'Rahu': 'Rahu',
+            'Ketu': 'Ketu'
+        };
+
+        const houseMap = {
+            '1st': '1', '2nd': '2', '3rd': '3', '4th': '4', '5th': '5',
+            '6th': '6', '7th': '7', '8th': '8', '9th': '9',
+            '10th': '10', '11th': '11', '12th': '12'
+        };
+
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) continue;
+            if (/Planet\s+Tara/i.test(trimmed)) continue;
+            if (/^-+/.test(trimmed)) continue;
+
+            let match = trimmed.match(/^(Sun|Moon|Mars|Mercury|Jupiter|Venus|Saturn|Rahu|Ketu)\s+/i);
+            if (!match) continue;
+
+            const engName = match[1];
+            const cnName = planetMap[engName] || engName;
+
+            let houseMatch = trimmed.match(/\b(1st|2nd|3rd|4th|5th|6th|7th|8th|9th|10th|11th|12th)\b/);
+            if (!houseMatch) {
+                houseMatch = trimmed.match(/\b(\d+)(?:st|nd|rd|th)\s*(?:\(Good\))?/);
+            }
+            if (!houseMatch) continue;
+
+            let houseNum = houseMap[houseMatch[1]] || houseMatch[1];
+            const isGood = /\(Good\)/i.test(trimmed);
+
+            result[cnName] = {
+                house: houseNum,
+                good: isGood
+            };
+        }
+
+        return result;
+    },
+
+    // ================================================================
+    // 合并所有数据（含 Gochara）
+    // ================================================================
+    mergeAll: function(fullText, divText, dashaText, transitText, filters) {
         const outputSections = [];
+
+        // 出生基础信息
         let birthInfo = '';
         if (fullText) {
             birthInfo = this.extractBirthInfo(fullText);
@@ -809,6 +897,8 @@ window.JhoraParser = {
             outputSections.push('【出生基础信息】');
             outputSections.push('⚠️ 未检测到出生信息。请粘贴“完整全盘计算文本”（框1）以补充。');
         }
+
+        // 分盘数据
         const blockMap = {};
         if (fullText) {
             const rawBlocks = this.extractBodyLongitudeBlocks(fullText);
@@ -830,17 +920,22 @@ window.JhoraParser = {
                 }
             }
         }
+
         const typeOrder = { 'D1': 0, 'D2': 1, 'D3': 2, 'D4': 3, 'D5': 4, 'D6': 5, 'D7': 6, 'D8': 7, 'D9': 8,
             'D10': 9, 'D11': 10, 'D12': 11, 'D16': 12, 'D20': 13, 'D24': 14, 'D27': 15, 'D30': 16, 'D40': 17,
             'D45': 18, 'D60': 19, 'D81': 20, 'D108': 21, 'D144': 22
         };
+
         const divisionalBlocks = Object.entries(blockMap)
             .map(([type, data]) => ({ type, lines: data.lines }))
             .sort((a, b) => (typeOrder[a.type] ?? 99) - (typeOrder[b.type] ?? 99));
+
         for (const block of divisionalBlocks) {
             outputSections.push(`=== ${block.type} 分盘 ===`);
             outputSections.push(block.lines.join('\n'));
         }
+
+        // Dasha 数据
         let dashaSource = dashaText;
         if (!dashaSource && fullText) {
             dashaSource = this.extractDashaFromFull(fullText);
@@ -854,6 +949,19 @@ window.JhoraParser = {
                 outputSections.push(dashaStr);
             }
         }
+
+        // Gochara 数据
+        if (transitText) {
+            const transitData = this.parseTransitData(transitText);
+            if (Object.keys(transitData).length > 0) {
+                outputSections.push('=== 当前过运 (Gochara) ===');
+                for (const [planet, data] of Object.entries(transitData)) {
+                    const goodTag = data.good ? ' (吉)' : '';
+                    outputSections.push(`${planet}: 第${data.house}宫${goodTag}`);
+                }
+            }
+        }
+
         return outputSections.join('\n\n');
     }
 };
