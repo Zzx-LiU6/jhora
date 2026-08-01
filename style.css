@@ -100,7 +100,7 @@ body {
 }
 .paste-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;  /* ← 改这里：从 3 列改成 2 列 */
     gap: 16px;
     margin-bottom: 24px;
 }
