@@ -36,11 +36,11 @@
 4. 配合 [JHora AI 提问助手](https://jhora-prompt.pages.dev) 生成专属提问话术
 
 ## 项目结构
+```text
 /
-├── index.html # 页面结构
-├── style.css # 样式
-└── app.js # 完整逻辑
-
+├── index.html  # 页面结构
+├── style.css   # 样式
+└── app.js      # 完整逻辑
 
 ## License
 
