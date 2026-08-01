@@ -1,6 +1,6 @@
 # 🔮 JHora 星盘文本清洗工具
 
-一个专门处理 Jagannatha Hora（Jhora）软件导出星盘文本的纯前端工具。自动清洗冗余数据，输出 AI 友好的标准化文本。
+一个专门处理 Jagannatha Hora（JHora）软件导出星盘文本的纯前端工具。自动清洗冗余数据，输出 AI 友好的标准化文本。
 
 在线地址: https://jhora-clean.pages.dev
 
