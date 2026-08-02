@@ -14,7 +14,6 @@
             <div class="header-actions">
                 <button class="btn btn-gold-outline" onclick="openTutorialModal()">📘 教程</button>
                 <button class="btn btn-gold-outline" onclick="openGlossaryModal()">🔍 星体说明</button>
-                <!-- ===== 入口1：header 跳转 ===== -->
                 <button class="btn btn-gold-outline" onclick="window.open('https://jhora-prompt.pages.dev', '_blank')">✨ 去提问助手</button>
             </div>
         </header>
@@ -60,10 +59,20 @@
 
         <div class="action-bar">
             <button class="btn btn-primary" onclick="mergeAndGenerate()">⚡ 合并生成</button>
+            <!-- ===== 新增：性别选择器 ===== -->
+            <div style="display:flex;align-items:center;gap:8px;margin-left:4px;border-left:1px solid #26303e;padding-left:12px;">
+                <span style="color:#8b949e;font-size:12px;">👤</span>
+                <label style="color:#d0d4dc;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:3px;">
+                    <input type="radio" name="gender" value="male" /> 男
+                </label>
+                <label style="color:#d0d4dc;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:3px;">
+                    <input type="radio" name="gender" value="female" checked /> 女
+                </label>
+                <span style="font-size:10px;color:#5a6373;">（用于感情分析）</span>
+            </div>
             <button class="btn btn-gold-outline" onclick="openFilterModal()">🎯 筛选设置</button>
             <button class="btn btn-gold-outline" onclick="copyAndShowModal()">📋 复制成品</button>
             <button class="btn btn-gold-outline" onclick="exportTxt()">⬇️ 导出TXT</button>
-            <!-- ===== 入口2：action-bar 跳转（带数据复制） ===== -->
             <button class="btn btn-gold-outline" onclick="goToPrompt()">✨ 去提问助手</button>
             <button class="btn btn-gold-outline" onclick="openHistoryModal()">📜 历史 <span class="history-count" id="historyBadge"></span></button>
             <span style="font-size:12px;color:#5a6373;margin-left:4px;">Ctrl+Enter</span>
@@ -214,7 +223,6 @@
                 <button class="btn" onclick="openAI('gemini')">Gemini</button>
                 <button class="btn" onclick="openAI('claude')">Claude</button>
             </div>
-            <!-- ===== 入口3：弹窗跳转 ===== -->
             <div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;">
                 <button class="btn btn-gold-outline" onclick="goToPrompt()" style="flex:1;min-width:120px;text-align:center;">✨ 去提问助手</button>
             </div>
