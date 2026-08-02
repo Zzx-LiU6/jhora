@@ -975,22 +975,23 @@ function goToPrompt() {
         return;
     }
 
-    // 尝试自动复制到剪贴板（不阻塞跳转）
+    // 先尝试复制
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(data)
             .then(() => {
-                showToast('✅ 数据已复制到剪贴板，请到提问助手 Ctrl+V 粘贴');
+                showToast('✅ 数据已复制，请到提问助手 Ctrl+V 粘贴');
+                // 复制成功后再跳转
+                window.open('https://jhora-prompt.pages.dev', '_blank');
             })
-            .catch(() => {
+            .catch((err) => {
+                console.warn('复制失败:', err);
                 showToast('📋 请手动复制数据（Ctrl+C）');
+                window.open('https://jhora-prompt.pages.dev', '_blank');
             });
     } else {
-        // 浏览器不支持剪贴板 API
         showToast('📋 请手动复制数据（Ctrl+C）');
+        window.open('https://jhora-prompt.pages.dev', '_blank');
     }
-
-    // 无论如何都跳转
-    window.open('https://jhora-prompt.pages.dev', '_blank');
 }
 
 // ================================================================
