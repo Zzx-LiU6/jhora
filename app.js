@@ -75,6 +75,7 @@ function getFilterState() {
         kunda: document.getElementById('fKunda').checked,
         ad: document.getElementById('fAD').checked,
         pratyantardasa: document.getElementById('fPratyantardasa').checked,
+        advancedData: document.getElementById('fAdvancedData').checked,
     };
 }
 
@@ -92,6 +93,7 @@ function resetAllFilters(showToastMsg) {
     document.getElementById('fOuter').checked = false;
     document.getElementById('fAD').checked = false;
     document.getElementById('fPratyantardasa').checked = false;
+    document.getElementById('fAdvancedData').checked = false;
     document.getElementById('presetMinimal').classList.remove('active-preset');
     document.getElementById('presetPro').classList.remove('active-preset');
     if (showToastMsg !== false) showToast('↺ 已重置');
@@ -107,6 +109,8 @@ function applyPreset(mode) {
         setGroup(false, 'fArudhaLagna', 'fBhavaArudha', 'fGrahaArudha', 'fVarnadas', 'fKunda');
         document.getElementById('fAD').checked = false;
         document.getElementById('fPratyantardasa').checked = false;
+        // ===== 极简模式不选进阶数据 =====
+        document.getElementById('fAdvancedData').checked = false;
         document.getElementById('presetMinimal').classList.add('active-preset');
         document.getElementById('presetPro').classList.remove('active-preset');
         document.getElementById('modeBadge').textContent = '极简模式已启用';
@@ -122,6 +126,8 @@ function applyPreset(mode) {
         setGroup(false, 'fBhavaArudha', 'fGrahaArudha', 'fVarnadas', 'fKunda');
         document.getElementById('fAD').checked = false;
         document.getElementById('fPratyantardasa').checked = false;
+        // ===== 专业模式勾选进阶数据 =====
+        document.getElementById('fAdvancedData').checked = true;
         document.getElementById('presetPro').classList.add('active-preset');
         document.getElementById('presetMinimal').classList.remove('active-preset');
         document.getElementById('modeBadge').textContent = '专业模式已启用';
@@ -143,7 +149,7 @@ function cleanSingle(type) {
     try {
         if (type === 'full') {
             const birth = parser.extractBirthInfo(raw);
-            const blocks = parser.extractBodyLongitudeBlocks(raw);
+            const blocks = parser.extractBodyLongitudeBlocks(raw, filters);
             let parts = [];
             if (birth) parts.push('【出生基础信息】\n' + birth);
             for (const block of blocks) {
@@ -538,7 +544,7 @@ window.JhoraParser = {
         return birthLines.join('\n').trim();
     },
 
-extractBodyLongitudeBlocks: function(text) {
+extractBodyLongitudeBlocks: function(text, filters) {
     const lines = text.split('\n');
     const blocks = [];
     let currentBlock = [];
@@ -547,165 +553,208 @@ extractBodyLongitudeBlocks: function(text) {
     let inSupplementary = false;
     let supplementaryLines = [];
     let seenD1 = false;
+    let currentSupplementType = '';
+    let prevSupplementType = '';
+
+    const f = filters || { advancedData: false };
+
+    function getSupplementType(line) {
+        if (/^Chara karaka/i.test(line)) return 'charaKaraka';
+        if (/Ashtakavarga/i.test(line)) return 'ashtakavarga';
+        if (/Vimsopaka/i.test(line)) return 'vimsopaka';
+        if (/Shadbala/i.test(line)) return 'shadbala';
+        if (/Vaiseshikamsa/i.test(line)) return 'vaiseshikamsa';
+        if (/Sodhya Pinda|Rasi Pinda|Graha Pinda|Planet\s+Age|Planet\s+Activity/i.test(line)) return 'removed';
+        return 'other';
+    }
+
+    function shouldKeepSupplement(type) {
+        if (type === 'charaKaraka' || type === 'ashtakavarga' || type === 'vimsopaka') return true;
+        if (type === 'shadbala' || type === 'vaiseshikamsa') return f.advancedData === true;
+        if (type === 'removed') return false;
+        return f.advancedData === true;
+    }
 
     for (const line of lines) {
         const trimmed = line.trim();
         if (!trimmed) continue;
 
-        // 跳过文件路径行
         if (/^[A-Z]:\\/.test(trimmed)) continue;
         if (/^E:\\/.test(trimmed)) continue;
         if (/^C:\\/.test(trimmed)) continue;
 
-        // 跳过 ASCII 网格图
         if (/^\+-+/.test(trimmed)) {
-            // 如果正在收集补充数据，遇到网格图说明补充数据结束，提交并退出
             if (inSupplementary && supplementaryLines.length > 0) {
                 blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
                 supplementaryLines = [];
                 inSupplementary = false;
+                currentSupplementType = '';
+                prevSupplementType = '';
             }
             continue;
         }
 
-            // 检测大运开始 → 立即停止所有补充数据收集
-            if (/Vimsottari Dasa:|Moola Dasa:|Ashtottari Dasa:|Kalachakra Dasa:|Narayana Dasa:|Sudasa:/i.test(trimmed)) {
+        // 所有大运系统 → 停止补充数据
+        if (/Vimsottari Dasa:|Moola Dasa:|Ashtottari Dasa:|Kalachakra Dasa:|Narayana Dasa:|Sudasa:/i.test(trimmed)) {
+            if (supplementaryLines.length > 0) {
+                blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
+                supplementaryLines = [];
+            }
+            inSupplementary = false;
+            inBodyList = false;
+            currentSupplementType = '';
+            prevSupplementType = '';
+            continue;
+        }
+
+        const isHeader1 = /Body\s+Longitude\s*\(in\s+D-/i.test(trimmed);
+        const isHeader2 = /Body\s+Longitude\s+Nakshatra\s+Pada\s+Rasi\s+Navamsa/i.test(trimmed);
+
+        const isSupplementary = /Ashtakavarga|Shadbala|Vaiseshikamsa|Vimsopaka|Chara karaka|Shodasa Varga|Sapta Varga|Shad Varga|Planet\s+Activity|Planet\s+Age|Sodhya Pinda|Rasi Pinda|Graha Pinda/i.test(trimmed);
+
+        if (isHeader1 || isHeader2) {
+            if (currentBlock.length > 0) {
+                blocks.push({ header: header, lines: currentBlock });
+                currentBlock = [];
+            }
+            if (/\(in\s+D-1/i.test(trimmed) || /Nakshatra\s+Pada\s+Rasi\s+Navamsa/i.test(trimmed)) {
+                if (seenD1) {
+                    header = trimmed;
+                    inBodyList = true;
+                    inSupplementary = false;
+                    continue;
+                }
+                seenD1 = true;
+            }
+            header = trimmed;
+            inBodyList = true;
+            inSupplementary = false;
+            currentSupplementType = '';
+            prevSupplementType = '';
+            continue;
+        }
+
+        if (isSupplementary && inBodyList) {
+            if (currentBlock.length > 0) {
+                blocks.push({ header: header, lines: currentBlock });
+                currentBlock = [];
+            }
+            inBodyList = false;
+            inSupplementary = true;
+            const type = getSupplementType(trimmed);
+            if (type === 'removed' || !shouldKeepSupplement(type)) {
+                currentSupplementType = 'skipped';
+                prevSupplementType = 'skipped';
+                continue;
+            }
+            // 检测是否切换到新的数据块 → 插入空行
+            if (type !== 'other' && type !== 'skipped' && prevSupplementType !== '' && prevSupplementType !== type) {
+                if (supplementaryLines.length > 0 && supplementaryLines[supplementaryLines.length - 1] !== '') {
+                    supplementaryLines.push('');
+                }
+            }
+            currentSupplementType = type;
+            prevSupplementType = type;
+            supplementaryLines.push(trimmed);
+            continue;
+        }
+
+        if (inSupplementary) {
+            if (trimmed === '') {
                 if (supplementaryLines.length > 0) {
                     blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
                     supplementaryLines = [];
                 }
                 inSupplementary = false;
-                inBodyList = false;
+                currentSupplementType = '';
+                prevSupplementType = '';
                 continue;
             }
 
-            const isHeader1 = /Body\s+Longitude\s*\(in\s+D-/i.test(trimmed);
-            const isHeader2 = /Body\s+Longitude\s+Nakshatra\s+Pada\s+Rasi\s+Navamsa/i.test(trimmed);
-
-            // 补充数据识别（排除 Sodhya Pinda、Planet Activity、Planet Age）
-            const isSupplementary = /Ashtakavarga|Shadbala|Vaiseshikamsa|Vimsopaka|Chara karaka|Shodasa Varga|Sapta Varga|Shad Varga/i.test(trimmed)
-                && !/Sodhya Pinda|Planet\s+Age|Planet\s+Activity/i.test(trimmed);
-
-            if (isHeader1 || isHeader2) {
-                if (currentBlock.length > 0) {
-                    blocks.push({ header: header, lines: currentBlock });
-                    currentBlock = [];
+            if (/^Body\s+Longitude/i.test(trimmed)) {
+                if (supplementaryLines.length > 0) {
+                    blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
+                    supplementaryLines = [];
                 }
-                if (/\(in\s+D-1/i.test(trimmed) || /Nakshatra\s+Pada\s+Rasi\s+Navamsa/i.test(trimmed)) {
-                    if (seenD1) {
-                        header = trimmed;
-                        inBodyList = true;
-                        inSupplementary = false;
-                        continue;
-                    }
-                    seenD1 = true;
-                }
-                header = trimmed;
-                inBodyList = true;
                 inSupplementary = false;
+                currentSupplementType = '';
+                prevSupplementType = '';
+                const recheck = trimmed;
+                if (/^Body\s+Longitude/i.test(recheck)) {
+                    if (currentBlock.length > 0) {
+                        blocks.push({ header: header, lines: currentBlock });
+                        currentBlock = [];
+                    }
+                    header = recheck;
+                    inBodyList = true;
+                    continue;
+                }
                 continue;
             }
 
-            // 检测到补充数据
-            if (isSupplementary && inBodyList) {
-                if (currentBlock.length > 0) {
-                    blocks.push({ header: header, lines: currentBlock });
-                    currentBlock = [];
+            if (/^\+-+/.test(trimmed)) {
+                if (supplementaryLines.length > 0) {
+                    blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
+                    supplementaryLines = [];
                 }
-                inBodyList = false;
-                inSupplementary = true;
-                supplementaryLines.push(trimmed);
+                inSupplementary = false;
+                currentSupplementType = '';
+                prevSupplementType = '';
                 continue;
             }
 
-            // 正在收集补充数据
-            if (inSupplementary) {
-                // 遇到空行 → 提交补充数据，退出状态
-                if (trimmed === '') {
-                    if (supplementaryLines.length > 0) {
-                        blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
-                        supplementaryLines = [];
-                    }
-                    inSupplementary = false;
-                    continue;
-                }
-
-                // 遇到新的 Body Longitude 标题 → 提交补充数据，退出状态
-                if (/^Body\s+Longitude/i.test(trimmed)) {
-                    if (supplementaryLines.length > 0) {
-                        blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
-                        supplementaryLines = [];
-                    }
-                    inSupplementary = false;
-                    // 重新处理这一行作为 Body Longitude 标题
-                    const recheck = trimmed;
-                    if (/^Body\s+Longitude/i.test(recheck)) {
-                        if (currentBlock.length > 0) {
-                            blocks.push({ header: header, lines: currentBlock });
-                            currentBlock = [];
-                        }
-                        header = recheck;
-                        inBodyList = true;
-                        continue;
-                    }
-                    continue;
-                }
-
-                // 遇到 Chara karaka → 继续收集
-                if (/^Chara karaka/i.test(trimmed)) {
-                    supplementaryLines.push(trimmed);
-                    continue;
-                }
-
-                // 遇到网格图 → 提交补充数据，退出状态（已经在上层处理了，这里兜底）
-                if (/^\+-+/.test(trimmed)) {
-                    if (supplementaryLines.length > 0) {
-                        blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
-                        supplementaryLines = [];
-                    }
-                    inSupplementary = false;
-                    continue;
-                }
-
-                // 其他行 → 继续收集补充数据
-                supplementaryLines.push(trimmed);
+            if (currentSupplementType === 'skipped') {
                 continue;
             }
 
-            // 正常星体行
-            if (inBodyList && /^[A-Za-z]/.test(trimmed) && /[\d°']/.test(trimmed)) {
-                currentBlock.push(trimmed);
+            // 检查当前行是否属于新的补充数据类型
+            const currentType = getSupplementType(trimmed);
+            if (currentType === 'removed' || !shouldKeepSupplement(currentType)) {
                 continue;
             }
-
-            // 检测到 Chara karaka 等关键词，结束当前块
-            if (inBodyList && /Chara karaka|Ashtakavarga|Shadbala|Vaiseshikamsa|Vimsopaka/i.test(trimmed)) {
-                if (currentBlock.length > 0) {
-                    blocks.push({ header: header, lines: currentBlock });
-                    currentBlock = [];
+            if (currentType !== 'other' && currentType !== 'skipped' && prevSupplementType !== '' && prevSupplementType !== currentType) {
+                if (supplementaryLines.length > 0 && supplementaryLines[supplementaryLines.length - 1] !== '') {
+                    supplementaryLines.push('');
                 }
-                inBodyList = false;
-                header = '';
+                prevSupplementType = currentType;
+                currentSupplementType = currentType;
             }
+
+            supplementaryLines.push(trimmed);
+            continue;
         }
 
-        // 处理最后的块
-        if (currentBlock.length > 0) {
-            blocks.push({ header: header || 'D1', lines: currentBlock });
-        }
-        if (supplementaryLines.length > 0) {
-            blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
+        if (inBodyList && /^[A-Za-z]/.test(trimmed) && /[\d°']/.test(trimmed)) {
+            currentBlock.push(trimmed);
+            continue;
         }
 
-        if (blocks.length === 0) {
-            const allLines = lines.filter(l => l.trim() && /^[A-Za-z]/.test(l.trim()) && /[\d°']/.test(l.trim()));
-            if (allLines.length > 0) {
-                blocks.push({ header: 'D1', lines: allLines });
+        if (inBodyList && /Chara karaka|Ashtakavarga|Shadbala|Vaiseshikamsa|Vimsopaka/i.test(trimmed)) {
+            if (currentBlock.length > 0) {
+                blocks.push({ header: header, lines: currentBlock });
+                currentBlock = [];
             }
+            inBodyList = false;
+            header = '';
         }
+    }
 
-        return blocks;
-    },
+    if (currentBlock.length > 0) {
+        blocks.push({ header: header || 'D1', lines: currentBlock });
+    }
+    if (supplementaryLines.length > 0) {
+        blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
+    }
+
+    if (blocks.length === 0) {
+        const allLines = lines.filter(l => l.trim() && /^[A-Za-z]/.test(l.trim()) && /[\d°']/.test(l.trim()));
+        if (allLines.length > 0) {
+            blocks.push({ header: 'D1', lines: allLines });
+        }
+    }
+
+    return blocks;
+},
 
     detectDivisionalType: function(headerText) {
         const match = headerText.match(/\(in\s+D-(\d+)/i);
@@ -1038,7 +1087,7 @@ extractBodyLongitudeBlocks: function(text) {
         }
 
         // 分盘数据 + 补充数据
-        const blocks = this.extractBodyLongitudeBlocks(fullText);
+        const blocks = this.extractBodyLongitudeBlocks(fullText, filters);
         const blockMap = {};
 
         for (const block of blocks) {
