@@ -75,7 +75,8 @@ function getFilterState() {
         kunda: document.getElementById('fKunda').checked,
         ad: document.getElementById('fAD').checked,
         pratyantardasa: document.getElementById('fPratyantardasa').checked,
-        advancedData: document.getElementById('fAdvancedData').checked,
+        shadbala: document.getElementById('fShadbala').checked,
+        vaiseshikamsa: document.getElementById('fVaiseshikamsa').checked,
     };
 }
 
@@ -93,7 +94,8 @@ function resetAllFilters(showToastMsg) {
     document.getElementById('fOuter').checked = false;
     document.getElementById('fAD').checked = false;
     document.getElementById('fPratyantardasa').checked = false;
-    document.getElementById('fAdvancedData').checked = false;
+    document.getElementById('fShadbala').checked = false;
+    document.getElementById('fVaiseshikamsa').checked = false;
     document.getElementById('presetMinimal').classList.remove('active-preset');
     document.getElementById('presetPro').classList.remove('active-preset');
     if (showToastMsg !== false) showToast('↺ 已重置');
@@ -109,8 +111,9 @@ function applyPreset(mode) {
         setGroup(false, 'fArudhaLagna', 'fBhavaArudha', 'fGrahaArudha', 'fVarnadas', 'fKunda');
         document.getElementById('fAD').checked = false;
         document.getElementById('fPratyantardasa').checked = false;
-        // ===== 极简模式不选进阶数据 =====
-        document.getElementById('fAdvancedData').checked = false;
+        // ===== 极简模式：两个都不选 =====
+        document.getElementById('fShadbala').checked = false;
+        document.getElementById('fVaiseshikamsa').checked = false;
         document.getElementById('presetMinimal').classList.add('active-preset');
         document.getElementById('presetPro').classList.remove('active-preset');
         document.getElementById('modeBadge').textContent = '极简模式已启用';
@@ -126,8 +129,9 @@ function applyPreset(mode) {
         setGroup(false, 'fBhavaArudha', 'fGrahaArudha', 'fVarnadas', 'fKunda');
         document.getElementById('fAD').checked = false;
         document.getElementById('fPratyantardasa').checked = false;
-        // ===== 专业模式勾选进阶数据 =====
-        document.getElementById('fAdvancedData').checked = true;
+        // ===== 专业模式：两个都勾选 =====
+        document.getElementById('fShadbala').checked = true;
+        document.getElementById('fVaiseshikamsa').checked = true;
         document.getElementById('presetPro').classList.add('active-preset');
         document.getElementById('presetMinimal').classList.remove('active-preset');
         document.getElementById('modeBadge').textContent = '专业模式已启用';
@@ -556,7 +560,7 @@ extractBodyLongitudeBlocks: function(text, filters) {
     let currentSupplementType = '';
     let prevSupplementType = '';
 
-    const f = filters || { advancedData: false };
+    const f = filters || { shadbala: false, vaiseshikamsa: false };
 
     function getSupplementType(line) {
         if (/^Chara karaka/i.test(line)) return 'charaKaraka';
@@ -570,9 +574,10 @@ extractBodyLongitudeBlocks: function(text, filters) {
 
     function shouldKeepSupplement(type) {
         if (type === 'charaKaraka' || type === 'ashtakavarga' || type === 'vimsopaka') return true;
-        if (type === 'shadbala' || type === 'vaiseshikamsa') return f.advancedData === true;
+        if (type === 'shadbala') return f.shadbala === true;
+        if (type === 'vaiseshikamsa') return f.vaiseshikamsa === true;
         if (type === 'removed') return false;
-        return f.advancedData === true;
+        return false;
     }
 
     for (const line of lines) {
