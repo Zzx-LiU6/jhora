@@ -538,34 +538,37 @@ window.JhoraParser = {
         return birthLines.join('\n').trim();
     },
 
-    extractBodyLongitudeBlocks: function(text) {
-        const lines = text.split('\n');
-        const blocks = [];
-        let currentBlock = [];
-        let header = '';
-        let inBodyList = false;
-        let inSupplementary = false;
-        let supplementaryLines = [];
-        let started = false;
-        let seenD1 = false;
+extractBodyLongitudeBlocks: function(text) {
+    const lines = text.split('\n');
+    const blocks = [];
+    let currentBlock = [];
+    let header = '';
+    let inBodyList = false;
+    let inSupplementary = false;
+    let supplementaryLines = [];
+    let seenD1 = false;
 
-        for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed) continue;
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
 
-            // 跳过路径行
-            if (/^[A-Z]:\\/.test(trimmed)) continue;
-            if (/^E:\\/.test(trimmed)) continue;
-            if (/^C:\\/.test(trimmed)) continue;
+        // 跳过文件路径行
+        if (/^[A-Z]:\\/.test(trimmed)) continue;
+        if (/^E:\\/.test(trimmed)) continue;
+        if (/^C:\\/.test(trimmed)) continue;
 
-            // 跳过网格图
-            if (/^\+-+/.test(trimmed)) continue;
-            if (/^\+-+/.test(trimmed) && /\|/.test(trimmed)) continue;
+        // 跳过 ASCII 网格图
+        if (/^\+-+/.test(trimmed)) {
+            // 如果正在收集补充数据，遇到网格图说明补充数据结束，提交并退出
+            if (inSupplementary && supplementaryLines.length > 0) {
+                blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
+                supplementaryLines = [];
+                inSupplementary = false;
+            }
+            continue;
+        }
 
-            const isHeader1 = /Body\s+Longitude\s*\(in\s+D-/i.test(trimmed);
-            const isHeader2 = /Body\s+Longitude\s+Nakshatra\s+Pada\s+Rasi\s+Navamsa/i.test(trimmed);
-
-            // 检测大运开始，停止收集补充数据
+            // 检测大运开始 → 立即停止所有补充数据收集
             if (/Vimsottari Dasa:|Moola Dasa:|Ashtottari Dasa:|Kalachakra Dasa:|Narayana Dasa:|Sudasa:/i.test(trimmed)) {
                 if (supplementaryLines.length > 0) {
                     blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
@@ -576,17 +579,20 @@ window.JhoraParser = {
                 continue;
             }
 
-            const isSupplementary = /Ashtakavarga|Shadbala|Vaiseshikamsa|Vimsopaka|Chara karaka|Planet\s+Age|Planet\s+Activity|Shodasa Varga|Sapta Varga|Shad Varga/i.test(trimmed);
+            const isHeader1 = /Body\s+Longitude\s*\(in\s+D-/i.test(trimmed);
+            const isHeader2 = /Body\s+Longitude\s+Nakshatra\s+Pada\s+Rasi\s+Navamsa/i.test(trimmed);
+
+            // 补充数据识别（排除 Sodhya Pinda、Planet Activity、Planet Age）
+            const isSupplementary = /Ashtakavarga|Shadbala|Vaiseshikamsa|Vimsopaka|Chara karaka|Shodasa Varga|Sapta Varga|Shad Varga/i.test(trimmed)
+                && !/Sodhya Pinda|Planet\s+Age|Planet\s+Activity/i.test(trimmed);
 
             if (isHeader1 || isHeader2) {
                 if (currentBlock.length > 0) {
                     blocks.push({ header: header, lines: currentBlock });
                     currentBlock = [];
                 }
-                // 检测是否是 D1，如果是则标记
                 if (/\(in\s+D-1/i.test(trimmed) || /Nakshatra\s+Pada\s+Rasi\s+Navamsa/i.test(trimmed)) {
                     if (seenD1) {
-                        // 已经见过 D1 了，跳过重复的
                         header = trimmed;
                         inBodyList = true;
                         inSupplementary = false;
@@ -600,6 +606,7 @@ window.JhoraParser = {
                 continue;
             }
 
+            // 检测到补充数据
             if (isSupplementary && inBodyList) {
                 if (currentBlock.length > 0) {
                     blocks.push({ header: header, lines: currentBlock });
@@ -611,40 +618,67 @@ window.JhoraParser = {
                 continue;
             }
 
+            // 正在收集补充数据
             if (inSupplementary) {
-                if (trimmed && !/^Body\s+Longitude/i.test(trimmed) && !/^Chara karaka/i.test(trimmed) && !/^Planet\s+Age/i.test(trimmed) && !/^Planet\s+Activity/i.test(trimmed) && !/^\+-+/.test(trimmed)) {
-                    supplementaryLines.push(trimmed);
-                } else if (trimmed === '' && supplementaryLines.length > 0) {
+                // 遇到空行 → 提交补充数据，退出状态
+                if (trimmed === '') {
                     if (supplementaryLines.length > 0) {
                         blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
                         supplementaryLines = [];
                     }
                     inSupplementary = false;
-                } else if (/^\+-+/.test(trimmed)) {
-                    // 跳过网格图
                     continue;
-                } else if (trimmed === '') {
-                    // ignore
-                } else {
+                }
+
+                // 遇到新的 Body Longitude 标题 → 提交补充数据，退出状态
+                if (/^Body\s+Longitude/i.test(trimmed)) {
                     if (supplementaryLines.length > 0) {
                         blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
                         supplementaryLines = [];
                     }
                     inSupplementary = false;
-                    const trimmedRecheck = trimmed;
-                    if (/^[A-Za-z]/.test(trimmedRecheck) && /[\d°']/.test(trimmedRecheck)) {
-                        currentBlock.push(trimmedRecheck);
+                    // 重新处理这一行作为 Body Longitude 标题
+                    const recheck = trimmed;
+                    if (/^Body\s+Longitude/i.test(recheck)) {
+                        if (currentBlock.length > 0) {
+                            blocks.push({ header: header, lines: currentBlock });
+                            currentBlock = [];
+                        }
+                        header = recheck;
                         inBodyList = true;
+                        continue;
                     }
+                    continue;
                 }
+
+                // 遇到 Chara karaka → 继续收集
+                if (/^Chara karaka/i.test(trimmed)) {
+                    supplementaryLines.push(trimmed);
+                    continue;
+                }
+
+                // 遇到网格图 → 提交补充数据，退出状态（已经在上层处理了，这里兜底）
+                if (/^\+-+/.test(trimmed)) {
+                    if (supplementaryLines.length > 0) {
+                        blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
+                        supplementaryLines = [];
+                    }
+                    inSupplementary = false;
+                    continue;
+                }
+
+                // 其他行 → 继续收集补充数据
+                supplementaryLines.push(trimmed);
                 continue;
             }
 
+            // 正常星体行
             if (inBodyList && /^[A-Za-z]/.test(trimmed) && /[\d°']/.test(trimmed)) {
                 currentBlock.push(trimmed);
                 continue;
             }
 
+            // 检测到 Chara karaka 等关键词，结束当前块
             if (inBodyList && /Chara karaka|Ashtakavarga|Shadbala|Vaiseshikamsa|Vimsopaka/i.test(trimmed)) {
                 if (currentBlock.length > 0) {
                     blocks.push({ header: header, lines: currentBlock });
@@ -655,6 +689,7 @@ window.JhoraParser = {
             }
         }
 
+        // 处理最后的块
         if (currentBlock.length > 0) {
             blocks.push({ header: header || 'D1', lines: currentBlock });
         }
