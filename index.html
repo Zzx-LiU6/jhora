@@ -21,7 +21,7 @@
         <div class="paste-grid">
             <div class="paste-box">
                 <div class="label">📋 完整全盘计算文本</div>
-                <div class="step-hint">Edit → Copy complete calculations<br />提取出生信息 + D1星体列表，丢弃网格</div>
+                <div class="step-hint">Edit → Copy complete calculations<br />提取出生信息、星体列表与补充数据，丢弃网格</div>
                 <textarea id="pasteFull" placeholder="粘贴完整全盘文本…"></textarea>
                 <div class="paste-actions">
                     <button class="btn btn-primary btn-sm" onclick="cleanSingle('full')">清洗本段</button>
@@ -68,7 +68,6 @@
                 <label style="color:#d0d4dc;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:3px;">
                     <input type="radio" name="gender" value="female" checked /> 女
                 </label>
-                <span style="font-size:10px;color:#5a6373;">（用于感情分析）</span>
             </div>
             <button class="btn btn-gold-outline" onclick="openFilterModal()">🎯 筛选设置</button>
             <button class="btn btn-gold-outline" onclick="copyAndShowModal()">📋 复制成品</button>
