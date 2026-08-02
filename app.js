@@ -975,22 +975,31 @@ function goToPrompt() {
         return;
     }
 
-    // 先尝试复制
+    // 先显示提示
+    showToast('📋 正在复制数据...');
+
+    // 复制数据
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(data)
             .then(() => {
                 showToast('✅ 数据已复制，请到提问助手 Ctrl+V 粘贴');
-                // 复制成功后再跳转
-                window.open('https://jhora-prompt.pages.dev', '_blank');
+                // 延迟 300ms 再跳转，确保 Toast 显示出来
+                setTimeout(() => {
+                    window.open('https://jhora-prompt.pages.dev', '_blank');
+                }, 300);
             })
             .catch((err) => {
                 console.warn('复制失败:', err);
                 showToast('📋 请手动复制数据（Ctrl+C）');
-                window.open('https://jhora-prompt.pages.dev', '_blank');
+                setTimeout(() => {
+                    window.open('https://jhora-prompt.pages.dev', '_blank');
+                }, 300);
             });
     } else {
         showToast('📋 请手动复制数据（Ctrl+C）');
-        window.open('https://jhora-prompt.pages.dev', '_blank');
+        setTimeout(() => {
+            window.open('https://jhora-prompt.pages.dev', '_blank');
+        }, 300);
     }
 }
 
