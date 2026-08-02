@@ -584,10 +584,12 @@ extractBodyLongitudeBlocks: function(text, filters) {
         const trimmed = line.trim();
         if (!trimmed) continue;
 
+        // 跳过文件路径
         if (/^[A-Z]:\\/.test(trimmed)) continue;
         if (/^E:\\/.test(trimmed)) continue;
         if (/^C:\\/.test(trimmed)) continue;
 
+        // 跳过 ASCII 网格图
         if (/^\+-+/.test(trimmed)) {
             if (inSupplementary && supplementaryLines.length > 0) {
                 blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
@@ -599,7 +601,7 @@ extractBodyLongitudeBlocks: function(text, filters) {
             continue;
         }
 
-        // 所有大运系统 → 停止补充数据
+        // 检测大运开始 → 停止所有补充数据收集
         if (/Vimsottari Dasa:|Moola Dasa:|Ashtottari Dasa:|Kalachakra Dasa:|Narayana Dasa:|Sudasa:/i.test(trimmed)) {
             if (supplementaryLines.length > 0) {
                 blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
@@ -614,7 +616,6 @@ extractBodyLongitudeBlocks: function(text, filters) {
 
         const isHeader1 = /Body\s+Longitude\s*\(in\s+D-/i.test(trimmed);
         const isHeader2 = /Body\s+Longitude\s+Nakshatra\s+Pada\s+Rasi\s+Navamsa/i.test(trimmed);
-
         const isSupplementary = /Ashtakavarga|Shadbala|Vaiseshikamsa|Vimsopaka|Chara karaka|Shodasa Varga|Sapta Varga|Shad Varga|Planet\s+Activity|Planet\s+Age|Sodhya Pinda|Rasi Pinda|Graha Pinda/i.test(trimmed);
 
         if (isHeader1 || isHeader2) {
@@ -652,7 +653,6 @@ extractBodyLongitudeBlocks: function(text, filters) {
                 prevSupplementType = 'skipped';
                 continue;
             }
-            // 检测是否切换到新的数据块 → 插入空行
             if (type !== 'other' && type !== 'skipped' && prevSupplementType !== '' && prevSupplementType !== type) {
                 if (supplementaryLines.length > 0 && supplementaryLines[supplementaryLines.length - 1] !== '') {
                     supplementaryLines.push('');
@@ -665,6 +665,7 @@ extractBodyLongitudeBlocks: function(text, filters) {
         }
 
         if (inSupplementary) {
+            // 空行 → 提交数据
             if (trimmed === '') {
                 if (supplementaryLines.length > 0) {
                     blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
@@ -676,6 +677,7 @@ extractBodyLongitudeBlocks: function(text, filters) {
                 continue;
             }
 
+            // 遇到 Body Longitude → 提交数据，切换模式
             if (/^Body\s+Longitude/i.test(trimmed)) {
                 if (supplementaryLines.length > 0) {
                     blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
@@ -684,19 +686,16 @@ extractBodyLongitudeBlocks: function(text, filters) {
                 inSupplementary = false;
                 currentSupplementType = '';
                 prevSupplementType = '';
-                const recheck = trimmed;
-                if (/^Body\s+Longitude/i.test(recheck)) {
-                    if (currentBlock.length > 0) {
-                        blocks.push({ header: header, lines: currentBlock });
-                        currentBlock = [];
-                    }
-                    header = recheck;
-                    inBodyList = true;
-                    continue;
+                if (currentBlock.length > 0) {
+                    blocks.push({ header: header, lines: currentBlock });
+                    currentBlock = [];
                 }
+                header = trimmed;
+                inBodyList = true;
                 continue;
             }
 
+            // 遇到网格图 → 提交数据
             if (/^\+-+/.test(trimmed)) {
                 if (supplementaryLines.length > 0) {
                     blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
@@ -712,7 +711,7 @@ extractBodyLongitudeBlocks: function(text, filters) {
                 continue;
             }
 
-            // 检查当前行是否属于新的补充数据类型
+            // 正常收集补充数据行
             const currentType = getSupplementType(trimmed);
             if (currentType === 'removed' || !shouldKeepSupplement(currentType)) {
                 continue;
@@ -729,6 +728,7 @@ extractBodyLongitudeBlocks: function(text, filters) {
             continue;
         }
 
+        // 正常星体行收集
         if (inBodyList && /^[A-Za-z]/.test(trimmed) && /[\d°']/.test(trimmed)) {
             currentBlock.push(trimmed);
             continue;
