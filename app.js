@@ -147,11 +147,16 @@ function cleanSingle(type) {
             let parts = [];
             if (birth) parts.push('【出生基础信息】\n' + birth);
             for (const block of blocks) {
-                const dType = parser.detectDivisionalType(block.header);
-                const filtered = parser.filterBodyList(block.lines, filters);
-                if (filtered.length > 0) {
-                    parts.push(`=== ${dType} 分盘 ===`);
-                    parts.push(filtered.join('\n'));
+                if (block.header === '=== 补充数据 ===') {
+                    parts.push('=== 补充数据 ===');
+                    parts.push(block.lines.join('\n'));
+                } else {
+                    const dType = parser.detectDivisionalType(block.header);
+                    const filtered = parser.filterBodyList(block.lines, filters);
+                    if (filtered.length > 0) {
+                        parts.push(`=== ${dType} 分盘 ===`);
+                        parts.push(filtered.join('\n'));
+                    }
                 }
             }
             const result = parts.join('\n\n') || '（未检测到有效数据）';
@@ -243,11 +248,18 @@ function mergeAndGenerate() {
         return;
     }
 
+    // ===== 读取性别 =====
+    const genderEl = document.querySelector('input[name="gender"]:checked');
+    const gender = genderEl ? genderEl.value : 'female';
+    const genderLabel = gender === 'male' ? 'Male' : 'Female';
+
     const filters = getFilterState();
     const parser = window.JhoraParser;
 
     try {
-        const result = parser.mergeAll(full, div, dasha, transit, filters);
+        let result = parser.mergeAll(full, div, dasha, transit, filters);
+        // ===== 在出生基础信息中插入性别 =====
+        result = result.replace('【出生基础信息】', `【出生基础信息】\nGender: ${genderLabel}`);
         document.getElementById('outputText').value = result;
         saveHistory(result);
         updateHistoryBadge();
@@ -522,11 +534,18 @@ window.JhoraParser = {
         let currentBlock = [];
         let header = '';
         let inBodyList = false;
+        let inSupplementary = false;
+        let supplementaryLines = [];
+
         for (const line of lines) {
             const trimmed = line.trim();
             if (!trimmed) continue;
+
             const isHeader1 = /Body\s+Longitude\s*\(in\s+D-/i.test(trimmed);
             const isHeader2 = /Body\s+Longitude\s+Nakshatra\s+Pada\s+Rasi\s+Navamsa/i.test(trimmed);
+
+            const isSupplementary = /Ashtakavarga|Shadbala|Vaiseshikamsa|Vimsopaka|Chara karaka|Planet\s+Age|Planet\s+Activity/i.test(trimmed);
+
             if (isHeader1 || isHeader2) {
                 if (currentBlock.length > 0) {
                     blocks.push({ header: header, lines: currentBlock });
@@ -534,12 +553,52 @@ window.JhoraParser = {
                 }
                 header = trimmed;
                 inBodyList = true;
+                inSupplementary = false;
                 continue;
             }
+
+            if (isSupplementary && inBodyList) {
+                if (currentBlock.length > 0) {
+                    blocks.push({ header: header, lines: currentBlock });
+                    currentBlock = [];
+                }
+                inBodyList = false;
+                inSupplementary = true;
+                supplementaryLines.push(trimmed);
+                continue;
+            }
+
+            if (inSupplementary) {
+                if (trimmed && !/^Body\s+Longitude/i.test(trimmed) && !/^Chara karaka/i.test(trimmed) && !/^Planet\s+Age/i.test(trimmed) && !/^Planet\s+Activity/i.test(trimmed)) {
+                    supplementaryLines.push(trimmed);
+                } else if (trimmed === '' && supplementaryLines.length > 0) {
+                    if (supplementaryLines.length > 0) {
+                        blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
+                        supplementaryLines = [];
+                    }
+                    inSupplementary = false;
+                } else if (trimmed === '') {
+                    // ignore
+                } else {
+                    if (supplementaryLines.length > 0) {
+                        blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
+                        supplementaryLines = [];
+                    }
+                    inSupplementary = false;
+                    const trimmedRecheck = trimmed;
+                    if (/^[A-Za-z]/.test(trimmedRecheck) && /[\d°']/.test(trimmedRecheck)) {
+                        currentBlock.push(trimmedRecheck);
+                        inBodyList = true;
+                    }
+                }
+                continue;
+            }
+
             if (inBodyList && /^[A-Za-z]/.test(trimmed) && /[\d°']/.test(trimmed)) {
                 currentBlock.push(trimmed);
                 continue;
             }
+
             if (inBodyList && /Chara karaka|Ashtakavarga|Shadbala|Vaiseshikamsa|Vimsopaka/i.test(trimmed)) {
                 if (currentBlock.length > 0) {
                     blocks.push({ header: header, lines: currentBlock });
@@ -549,15 +608,21 @@ window.JhoraParser = {
                 header = '';
             }
         }
+
         if (currentBlock.length > 0) {
             blocks.push({ header: header || 'D1', lines: currentBlock });
         }
+        if (supplementaryLines.length > 0) {
+            blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
+        }
+
         if (blocks.length === 0) {
             const allLines = lines.filter(l => l.trim() && /^[A-Za-z]/.test(l.trim()) && /[\d°']/.test(l.trim()));
             if (allLines.length > 0) {
                 blocks.push({ header: 'D1', lines: allLines });
             }
         }
+
         return blocks;
     },
 
@@ -824,9 +889,6 @@ window.JhoraParser = {
         return dashaLines.join('\n');
     },
 
-    // ================================================================
-    // 解析 Transit/Gochara 数据
-    // ================================================================
     parseTransitData: function(text) {
         const lines = text.split('\n');
         const result = {};
@@ -879,9 +941,6 @@ window.JhoraParser = {
         return result;
     },
 
-    // ================================================================
-    // 合并所有数据（含 Gochara）
-    // ================================================================
     mergeAll: function(fullText, divText, dashaText, transitText, filters) {
         const outputSections = [];
 
@@ -898,21 +957,35 @@ window.JhoraParser = {
             outputSections.push('⚠️ 未检测到出生信息。请粘贴“完整全盘计算文本”（框1）以补充。');
         }
 
-        // 分盘数据
+        // 分盘数据 + 补充数据
+        const blocks = this.extractBodyLongitudeBlocks(fullText);
         const blockMap = {};
-        if (fullText) {
-            const rawBlocks = this.extractBodyLongitudeBlocks(fullText);
-            for (const block of rawBlocks) {
-                const type = this.detectDivisionalType(block.header);
-                const filtered = this.filterBodyList(block.lines, filters);
-                if (filtered.length > 0) {
-                    blockMap[type] = { lines: filtered, source: 'full' };
+
+        for (const block of blocks) {
+            if (block.header === '=== 补充数据 ===') {
+                if (!blockMap['__supplementary']) {
+                    blockMap['__supplementary'] = [];
                 }
+                blockMap['__supplementary'].push(block.lines.join('\n'));
+                continue;
+            }
+            const type = this.detectDivisionalType(block.header);
+            const filtered = this.filterBodyList(block.lines, filters);
+            if (filtered.length > 0) {
+                blockMap[type] = { lines: filtered, source: 'full' };
             }
         }
+
         if (divText) {
-            const rawBlocks = this.extractBodyLongitudeBlocks(divText);
-            for (const block of rawBlocks) {
+            const divBlocks = this.extractBodyLongitudeBlocks(divText);
+            for (const block of divBlocks) {
+                if (block.header === '=== 补充数据 ===') {
+                    if (!blockMap['__supplementary']) {
+                        blockMap['__supplementary'] = [];
+                    }
+                    blockMap['__supplementary'].push(block.lines.join('\n'));
+                    continue;
+                }
                 const type = this.detectDivisionalType(block.header);
                 const filtered = this.filterBodyList(block.lines, filters);
                 if (filtered.length > 0) {
@@ -927,12 +1000,18 @@ window.JhoraParser = {
         };
 
         const divisionalBlocks = Object.entries(blockMap)
+            .filter(([type]) => type !== '__supplementary')
             .map(([type, data]) => ({ type, lines: data.lines }))
             .sort((a, b) => (typeOrder[a.type] ?? 99) - (typeOrder[b.type] ?? 99));
 
         for (const block of divisionalBlocks) {
             outputSections.push(`=== ${block.type} 分盘 ===`);
             outputSections.push(block.lines.join('\n'));
+        }
+
+        if (blockMap['__supplementary'] && blockMap['__supplementary'].length > 0) {
+            outputSections.push('=== 补充数据 ===');
+            outputSections.push(blockMap['__supplementary'].join('\n\n'));
         }
 
         // Dasha 数据
@@ -950,7 +1029,6 @@ window.JhoraParser = {
             }
         }
 
-        // Gochara 数据
         if (transitText) {
             const transitData = this.parseTransitData(transitText);
             if (Object.keys(transitData).length > 0) {
@@ -967,15 +1045,8 @@ window.JhoraParser = {
 };
 
 // ================================================================
-// ===== 跳转到提问助手 =====
+// ===== 跳转到提问助手（带数据复制） =====
 // ================================================================
-function goToPrompt() {
-    // 关闭当前弹窗
-    closeModal('aiModal');
-    // 跳转到提问助手
-    window.open('https://jhora-prompt.pages.dev', '_blank');
-}
-
 function goToPrompt() {
     const output = document.getElementById('outputText');
     const data = output.value.trim();
@@ -985,21 +1056,15 @@ function goToPrompt() {
         return;
     }
 
-    // 先显示提示
-    showToast('📋 正在复制数据...');
-
-    // 复制数据
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(data)
             .then(() => {
                 showToast('✅ 数据已复制，请到提问助手 Ctrl+V 粘贴');
-                // 延迟 300ms 再跳转，确保 Toast 显示出来
                 setTimeout(() => {
                     window.open('https://jhora-prompt.pages.dev', '_blank');
                 }, 300);
             })
-            .catch((err) => {
-                console.warn('复制失败:', err);
+            .catch(() => {
                 showToast('📋 请手动复制数据（Ctrl+C）');
                 setTimeout(() => {
                     window.open('https://jhora-prompt.pages.dev', '_blank');
