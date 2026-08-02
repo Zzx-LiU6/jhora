@@ -59,7 +59,7 @@
 
         <div class="action-bar">
             <button class="btn btn-primary" onclick="mergeAndGenerate()">⚡ 合并生成</button>
-            <!-- ===== 新增：性别选择器 ===== -->
+            <!-- ===== 性别选择器 ===== -->
             <div style="display:flex;align-items:center;gap:8px;margin-left:4px;border-left:1px solid #26303e;padding-left:12px;">
                 <span style="color:#8b949e;font-size:12px;">👤</span>
                 <label style="color:#d0d4dc;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:3px;">
@@ -193,6 +193,14 @@
                         <label><input type="checkbox" id="fVarnadas" /> Varnadas</label>
                         <label><input type="checkbox" id="fKunda" /> Kunda</label>
                     </div>
+                </div>
+                <!-- ===== 新增：进阶数据 ===== -->
+                <div class="filter-group">
+                    <div class="fg-title">📊 进阶数据 <span class="hint">（框1中的辅助分析数据）</span></div>
+                    <div class="fg-items">
+                        <label><input type="checkbox" id="fAdvancedData" checked /> 保留进阶数据（Shadbala / Vaiseshikamsa）</label>
+                    </div>
+                    <div style="font-size:10px;color:#5a6373;margin-top:4px;">💡 核心数据（Chara Karaka / Ashtakavarga / Vimsopaka）始终保留，不可关闭</div>
                 </div>
                 <div class="filter-group">
                     <div class="fg-title">⏳ 大运层级</div>
