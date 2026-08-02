@@ -3,121 +3,152 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>JHora 星盘清洗工具</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔮</text></svg>" />
+    <title>JHora AI 提问助手</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>" />
     <link rel="stylesheet" href="style.css" />
 </head>
 <body>
     <div class="container">
+        <!-- ===== 顶部导航 ===== -->
         <header class="header">
-            <h1>✦ JHora 星盘清洗工具</h1>
+            <h1>✦ JHora AI 提问助手</h1>
             <div class="header-actions">
-                <button class="btn btn-gold-outline" onclick="openTutorialModal()">📘 教程</button>
-                <button class="btn btn-gold-outline" onclick="openGlossaryModal()">🔍 星体说明</button>
+                <button class="btn btn-gold-outline" onclick="location.href='https://jhora-clean.pages.dev/'">🧹 去清洗星盘</button>
+                <button class="btn btn-gold-outline" onclick="openTutorialModal()">📘 使用指南</button>
+                <button class="btn btn-gold-outline" onclick="window.open('https://jhora-prompt.pages.dev', '_blank')">✨ 去提问助手</button>
             </div>
         </header>
 
-        <div class="paste-grid">
-            <div class="paste-box">
-                <div class="label">📋 完整全盘计算文本</div>
-                <div class="step-hint">Edit → Copy complete calculations<br />提取出生信息 + D1星体列表，丢弃网格</div>
-                <textarea id="pasteFull" placeholder="粘贴完整全盘文本…"></textarea>
-                <div class="paste-actions">
-                    <button class="btn btn-primary btn-sm" onclick="cleanSingle('full')">清洗本段</button>
-                    <button class="btn btn-danger btn-sm" onclick="clearPaste('full')">清空</button>
+        <!-- ===== 第一步：选择主题 ===== -->
+        <div class="step-section" id="step1">
+            <div class="step-label">❶ 你想问什么？</div>
+            <div class="topic-grid" id="topicGrid">
+                <div class="topic-card active" data-topic="love" onclick="selectTopic('love')">
+                    <div class="icon">❤️</div>
+                    <div class="name">感情婚姻</div>
+                    <div class="desc">脱单 / 恋爱 / 婚姻 / 复合</div>
                 </div>
-            </div>
-            <div class="paste-box">
-                <div class="label">📐 单分盘经度星体文本</div>
-                <div class="step-hint">右键→choose the divisional chart for longitudes→复制<br />粘贴一个分盘（D1、D9、D10…），自动识别，多次粘贴自动累加</div>
-                <textarea id="pasteDivisional" placeholder="粘贴单分盘文本…"></textarea>
-                <div class="paste-actions">
-                    <button class="btn btn-primary btn-sm" onclick="cleanSingle('divisional')">清洗本段（累加）</button>
-                    <button class="btn btn-danger btn-sm" onclick="clearPaste('divisional')">清空</button>
+                <div class="topic-card" data-topic="career" onclick="selectTopic('career')">
+                    <div class="icon">💼</div>
+                    <div class="name">事业发展</div>
+                    <div class="desc">求职 / 晋升 / 创业 / 转行</div>
                 </div>
-            </div>
-            <div class="paste-box">
-                <div class="label">⏳ Vimsottari 大运/小运</div>
-                <div class="step-hint">Dasas 菜单逐层复制，多次追加粘贴，自动合并去重</div>
-                <textarea id="pasteDasha" placeholder="粘贴大运时间线（可多次追加）…"></textarea>
-                <div class="paste-actions">
-                    <button class="btn btn-primary btn-sm" onclick="cleanSingle('dasha')">清洗本段</button>
-                    <button class="btn btn-danger btn-sm" onclick="clearPaste('dasha')">清空</button>
+                <div class="topic-card" data-topic="wealth" onclick="selectTopic('wealth')">
+                    <div class="icon">💰</div>
+                    <div class="name">财富运势</div>
+                    <div class="desc">收入 / 投资 / 债务 / 储蓄</div>
                 </div>
-            </div>
-            <div class="paste-box">
-                <div class="label">🌙 当前过运（Gochara/Transit）</div>
-                <div class="step-hint">Transit 菜单 → 复制当前过运表格<br />行星名称 + 过运宫位，用于精确时间窗口判断</div>
-                <textarea id="pasteTransit" placeholder="粘贴 Transit 表格数据…"></textarea>
-                <div class="paste-actions">
-                    <button class="btn btn-primary btn-sm" onclick="cleanSingle('transit')">清洗本段</button>
-                    <button class="btn btn-danger btn-sm" onclick="clearPaste('transit')">清空</button>
+                <div class="topic-card" data-topic="health" onclick="selectTopic('health')">
+                    <div class="icon">🧘</div>
+                    <div class="name">身心健康</div>
+                    <div class="desc">体质 / 手术 / 情绪 / 孕期</div>
+                </div>
+                <div class="topic-card" data-topic="study" onclick="selectTopic('study')">
+                    <div class="icon">📚</div>
+                    <div class="name">学业教育</div>
+                    <div class="desc">考试 / 择校 / 学术潜力</div>
+                </div>
+                <div class="topic-card" data-topic="dasha" onclick="selectTopic('dasha')">
+                    <div class="icon">🌊</div>
+                    <div class="name">大运流年</div>
+                    <div class="desc">当前运势 / 未来节点 / 人生周期</div>
                 </div>
             </div>
         </div>
 
-        <div class="action-bar">
-            <button class="btn btn-primary" onclick="mergeAndGenerate()">⚡ 合并生成</button>
-            <button class="btn btn-gold-outline" onclick="openFilterModal()">🎯 筛选设置</button>
-            <button class="btn btn-gold-outline" onclick="copyAndShowModal()">📋 复制成品</button>
-            <button class="btn btn-gold-outline" onclick="exportTxt()">⬇️ 导出TXT</button>
-            <button class="btn btn-gold-outline" onclick="goToPrompt()">✨ 去提问助手</button>
-            <button class="btn btn-gold-outline" onclick="openHistoryModal()">📜 历史 <span class="history-count" id="historyBadge"></span></button>
-            <span style="font-size:12px;color:#5a6373;margin-left:4px;">Ctrl+Enter</span>
-            <span class="spacer"></span>
-            <span class="badge" id="modeBadge">极简模式已启用</span>
+        <!-- ===== 第二步：选择子场景 ===== -->
+        <div class="step-section" id="step2" style="display:none;">
+            <div class="step-label">❷ 具体是哪种情况？</div>
+            <div class="subtopic-grid" id="subtopicGrid">
+                <!-- 由 JS 动态渲染 -->
+            </div>
         </div>
 
-        <div class="output-area">
-            <textarea id="outputText" readonly placeholder="标准化星盘文本将在此显示…"></textarea>
+        <!-- ===== 第三步：勾选问题清单 ===== -->
+        <div class="step-section" id="step3" style="display:none;">
+            <div class="step-label">❸ 你想了解哪些方面？<span style="font-weight:400;font-size:12px;color:#7a8392;text-transform:none;">（可多选，至少选1个）</span></div>
+            <div class="question-grid" id="questionGrid">
+                <!-- 由 JS 动态渲染 -->
+            </div>
+            <div style="margin-top:16px;text-align:right;">
+                <button class="btn btn-gold-outline" onclick="selectAllQuestions()" style="margin-right:8px;">☑️ 全选</button>
+                <button class="btn btn-gold-outline" onclick="deselectAllQuestions()">⬜ 清空</button>
+            </div>
         </div>
 
+        <!-- ===== 第四步：方案看板（实时预览） ===== -->
+        <div class="step-section" id="step4" style="display:none;">
+            <div class="step-label">❹ 你的专属分析方案</div>
+            <div class="plan-card" id="planCard">
+                <div class="plan-row">
+                    <div class="plan-left">
+                        <div class="plan-title">📋 数据准备清单</div>
+                        <div class="data-tags" id="planDataTags"></div>
+                        <div class="data-explain" id="planDataExplain"></div>
+                    </div>
+                    <div class="plan-right">
+                        <div class="plan-title">📝 你关注的问题</div>
+                        <ul id="planSelectedQuestions"></ul>
+                    </div>
+                </div>
+                <!-- ===== 方案看板内的生成按钮已删除 ===== -->
+            </div>
+        </div>
+
+        <!-- ===== 第五步：粘贴星盘数据（移到方案看板后面） ===== -->
+        <div class="step-section" id="stepDataInput" style="display:none;">
+            <div class="step-label">📋 粘贴星盘数据</div>
+            <div style="background:#0a0f16;border:1px solid #26303e;border-radius:12px;padding:12px 16px;">
+                <textarea id="userDataInput" placeholder="从 JHora 清洗工具复制数据粘贴到这里…" style="width:100%;min-height:150px;background:transparent;border:none;color:#e0dccc;font-size:12px;font-family:monospace;padding:0;resize:vertical;outline:none;"></textarea>
+            </div>
+            <div style="font-size:12px;color:#5a6373;margin-top:6px;">💡 从清洗工具复制星盘数据粘贴到这里，生成 Prompt 时会自动填入【星盘数据】区域</div>
+        </div>
+
+        <!-- ===== 生成按钮 ===== -->
+        <div style="text-align:center;margin-top:16px;">
+            <button class="btn btn-primary" onclick="generatePrompt()" style="padding:10px 40px;font-size:16px;">🚀 生成专属提问话术</button>
+        </div>
+
+        <!-- ===== 底部 Footer ===== -->
         <div class="footer">
-            <strong>📄 重要说明：</strong> 框1仅提供出生信息和D1星体列表，框2支持多次粘贴不同分盘自动累加；同类型分盘新粘贴会覆盖旧数据。本工具不解析网格图形。
+            <strong>📄 使用流程：</strong> ① 选择主题 → ② 选择子场景 → ③ 勾选问题 → ④ 查看方案 → ⑤ 粘贴星盘数据 → ⑥ 生成专属提问话术
         </div>
     </div>
 
-    <!-- ===== 弹窗 教程 ===== -->
+    <!-- ============================================================ -->
+    <!-- ===== 模态框：教程 ===== -->
     <div class="modal-overlay" id="tutorialModal">
         <div class="modal-box" style="max-width:700px;">
             <button class="close-btn" onclick="closeModal('tutorialModal')">✕</button>
-            <h3>📘 JHora 入门指南</h3>
-            <div class="sub">下载 · 出生信息填写 · 数据源黄金法则</div>
+            <h3>📘 使用指南</h3>
+            <div class="sub">六步生成专属提问话术，让 AI 精准回答你的问题</div>
             <div class="tutorial-body">
                 <div class="section">
-                    <div class="st">▸ 官方下载 &amp; 安装</div>
-                    <ol>
-                        <li>搜索 <span class="inline-code">Jagannatha Hora official download</span></li>
-                        <li>进入开发者官网（<strong>仅官网安全</strong>，拒绝第三方下载站）</li>
-                        <li>选择 Windows / MacOS 版本下载</li>
-                        <li>安装：Windows 右键管理员运行；Mac 允许未知来源</li>
-                    </ol>
+                    <div class="st">▸ 第一步：选择主题</div>
+                    <p style="color:#d0d4dc;font-size:14px;">点击你当前最关心的领域：感情、事业、财运、健康、学业或大运流年。</p>
                 </div>
                 <div class="section">
-                    <div class="st">▸ Birthdata 出生信息对照</div>
-                    <div class="grid-2">
-                        <div class="field-item"><strong>Birthdate</strong> 月/日/年 · 公历</div>
-                        <div class="field-item"><strong>Birthtime</strong> 时/分/秒 · 24小时制</div>
-                        <div class="field-item"><strong>Gender</strong> Male男 / Female女</div>
-                        <div class="field-item"><strong>City name</strong> 美国选 USA，其他国家选 Rest of World</div>
-                    </div>
-                    <div class="highlight-box">
-                        ⚡ 城市搜索后 <strong>时区、经度、纬度</strong> 自动填充，一般无需修改。
-                    </div>
+                    <div class="st">▸ 第二步：选择子场景</div>
+                    <p style="color:#d0d4dc;font-size:14px;">选择你的具体情况，比如「单身脱单」还是「已婚趋势」。</p>
                 </div>
                 <div class="section">
-                    <div class="st">⚠️ 数据源黄金法则</div>
-                    <div class="highlight-box" style="border-left-color:#d4a0a0;">
-                        AI 无法识别星盘网格图和 PDF 截图。<br />
-                        <strong>务必使用</strong> <span class="inline-code">右键 → Copy to clipboard</span> 复制带度数的文本列表（即粘贴框2）。<br />
-                        本工具 <strong>不支持、不解析</strong> 任何表格/图片。
-                    </div>
+                    <div class="st">▸ 第三步：勾选问题</div>
+                    <p style="color:#d0d4dc;font-size:14px;">勾选你真正想知道的问题，系统会为你拼装专属的分析话术。</p>
                 </div>
-                <div style="margin-top:8px;padding:8px 12px;background:#1a232f;border-radius:6px;font-size:13px;color:#c8ccd4;">
-                    💡 可在软件中 <span class="inline-code">右击 → Select the bodies to show</span> 预先隐藏多余星体，减少冗余。
+                <div class="section">
+                    <div class="st">▸ 第四步：查看方案</div>
+                    <p style="color:#d0d4dc;font-size:14px;">查看「数据准备清单」和「你关注的问题」，确认你的分析方案。</p>
                 </div>
-                <div style="margin-top:12px;padding:8px 12px;background:#0f1620;border-radius:6px;font-size:12px;color:#7a8392;border-left:2px solid #b8943c;">
-                    📄 JHora PDF 导出：File → Print → Save as PDF（仅用于存档，AI无法解析PDF中的星盘图）
+                <div class="section">
+                    <div class="st">▸ 第五步：粘贴星盘数据</div>
+                    <p style="color:#d0d4dc;font-size:14px;">从 JHora 清洗工具复制标准化星盘数据，粘贴到输入框中。</p>
+                </div>
+                <div class="section">
+                    <div class="st">▸ 第六步：生成并复制</div>
+                    <p style="color:#d0d4dc;font-size:14px;">点击「生成」，复制 Prompt，粘贴到 AI 平台即可。</p>
+                </div>
+                <div class="highlight-box" style="border-left-color:#b8943c;">
+                    💡 <strong>提示：</strong>如果你还没有清洗好的星盘数据，请先使用 <strong>「🧹 去清洗星盘」</strong> 工具。
                 </div>
             </div>
             <div style="margin-top:16px;text-align:right;">
@@ -126,164 +157,31 @@
         </div>
     </div>
 
-    <!-- ===== 弹窗 筛选设置 ===== -->
-    <div class="modal-overlay" id="filterModal">
-        <div class="modal-box">
-            <button class="close-btn" onclick="closeModal('filterModal')">✕</button>
-            <h3>🎯 自定义筛选</h3>
-            <div class="sub">选择需要保留的星体、虚点、大运层级</div>
-            <div class="preset-row">
-                <span class="label">预设：</span>
-                <button class="btn btn-gold-outline btn-sm active-preset" id="presetMinimal" onclick="applyPreset('minimal')">极简AI模式</button>
-                <button class="btn btn-gold-outline btn-sm" id="presetPro" onclick="applyPreset('pro')">深度专业模式</button>
-                <button class="btn btn-danger btn-sm" onclick="resetAllFilters()">重置全部</button>
-            </div>
-            <div class="filter-grid">
-                <div class="filter-group">
-                    <div class="fg-title">⭐ 基础星体 <span class="hint">（核心，不可取消）</span></div>
-                    <div class="fg-items">
-                        <label class="disabled"><input type="checkbox" checked disabled /> Planets (9大星)</label>
-                        <label><input type="checkbox" id="fOuter" /> 外行星 (天王/海王/冥王)</label>
-                    </div>
-                </div>
-                <div class="filter-group">
-                    <div class="fg-title">🌀 辅助 Lagna <span class="hint">（可选）</span></div>
-                    <div class="fg-items">
-                        <label><input type="checkbox" id="fBhava" /> Bhava/Hora/Ghati</label>
-                        <label><input type="checkbox" id="fVighati" /> Vighati</label>
-                        <label><input type="checkbox" id="fVarnada" /> Varnada</label>
-                        <label><input type="checkbox" id="fSree" /> Sree</label>
-                        <label><input type="checkbox" id="fPranapada" /> Pranapada</label>
-                        <label><input type="checkbox" id="fIndu" /> Indu</label>
-                        <label><input type="checkbox" id="fBhrigu" /> Bhrigu Bindu</label>
-                    </div>
-                </div>
-                <div class="filter-group">
-                    <div class="fg-title">🌑 虚星 Upagrahas</div>
-                    <div class="fg-items">
-                        <label><input type="checkbox" id="fMandi" /> Mandi</label>
-                        <label><input type="checkbox" id="fGulika" /> Gulika</label>
-                        <label><input type="checkbox" id="fOtherUpagraha" /> Other</label>
-                    </div>
-                </div>
-                <div class="filter-group">
-                    <div class="fg-title">📊 Sphuta 数据</div>
-                    <div class="fg-items">
-                        <label><input type="checkbox" id="fSphutaPrasna" /> Prasna Marga</label>
-                        <label><input type="checkbox" id="fSphutaYoga" /> Yoga / Avayoga</label>
-                    </div>
-                </div>
-                <div class="filter-group">
-                    <div class="fg-title">🏹 阿鲁达 Arudha</div>
-                    <div class="fg-items">
-                        <label><input type="checkbox" id="fArudhaLagna" /> Arudha Lagna</label>
-                        <label><input type="checkbox" id="fBhavaArudha" /> Bhava Arudha</label>
-                        <label><input type="checkbox" id="fGrahaArudha" /> Graha Arudha</label>
-                        <label><input type="checkbox" id="fVarnadas" /> Varnadas</label>
-                        <label><input type="checkbox" id="fKunda" /> Kunda</label>
-                    </div>
-                </div>
-                <div class="filter-group">
-                    <div class="fg-title">⏳ 大运层级</div>
-                    <div class="fg-items">
-                        <label class="disabled"><input type="checkbox" checked disabled /> MD 主大运</label>
-                        <label><input type="checkbox" id="fAD" /> AD 次大运</label>
-                        <label><input type="checkbox" id="fPratyantardasa" /> 小小运</label>
-                    </div>
-                </div>
-            </div>
-            <div style="margin-top:16px;text-align:right;display:flex;gap:10px;justify-content:flex-end;">
-                <button class="btn" onclick="closeModal('filterModal')">取消</button>
-                <button class="btn btn-primary" onclick="closeModal('filterModal')">确认</button>
-            </div>
-        </div>
-    </div>
+    <!-- ===== 模态框：Prompt 结果 ===== -->
+    <div class="modal-overlay" id="promptResultModal">
+        <div class="modal-box" style="max-width:720px;">
+            <button class="close-btn" onclick="closeModal('promptResultModal')">✕</button>
+            <h3>📝 复制这段话给 AI</h3>
+            <div class="sub" id="resultSub">已根据你的选择生成专属提问话术</div>
 
-    <!-- ===== 弹窗 AI 跳转 ===== -->
-    <div class="modal-overlay" id="aiModal">
-        <div class="modal-box" style="max-width:520px;">
-            <button class="close-btn" onclick="closeModal('aiModal')">✕</button>
-            <h3>🤖 选择 AI 平台</h3>
-            <div class="sub">文本已复制，点击平台直达官网，粘贴即可解读</div>
-            <div class="modal-platforms">
-                <button class="btn" onclick="openAI('chatgpt')">ChatGPT</button>
-                <button class="btn" onclick="openAI('deepseek')">DeepSeek</button>
-                <button class="btn" onclick="openAI('gemini')">Gemini</button>
-                <button class="btn" onclick="openAI('claude')">Claude</button>
+            <div class="output-area" style="margin-bottom:12px;">
+                <textarea id="resultPrompt" readonly style="min-height:240px;font-size:12px;line-height:1.8;"></textarea>
             </div>
-            <div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;">
-                <button class="btn btn-gold-outline" onclick="goToPrompt()" style="flex:1;min-width:120px;text-align:center;">✨ 去提问助手</button>
-            </div>
-            <!-- 下面是专业话术生成器区域 -->
-            <div style="margin:12px 0 14px;">
-                <div style="font-size:13px;color:#d0d4dc;margin-bottom:4px;">🎯 生成专属提问话术</div>
-                <div class="prompt-checkboxes">
-                    <label><input type="checkbox" id="promptAll" checked /> 全盘</label>
-                    <label><input type="checkbox" id="promptCareer" /> 事业</label>
-                    <label><input type="checkbox" id="promptMarriage" /> 婚姻</label>
-                    <label><input type="checkbox" id="promptDasha" /> 大运</label>
-                </div>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                    <button class="btn btn-primary btn-sm" onclick="generatePrompt()">📝 生成并复制</button>
-                    <button class="btn btn-gold-outline btn-sm" onclick="copyDefaultPrompt()">📋 默认话术</button>
-                </div>
-            </div>
-            <div style="text-align:right;">
-                <button class="btn btn-danger" onclick="closeModal('aiModal')">关闭</button>
-            </div>
-        </div>
-    </div>
 
-    <!-- ===== 弹窗 历史记录 ===== -->
-    <div class="modal-overlay" id="historyModal">
-        <div class="modal-box">
-            <button class="close-btn" onclick="closeModal('historyModal')">✕</button>
-            <h3>📜 清洗历史 <span class="history-count" id="historyCount"></span></h3>
-            <div class="sub">点击任意记录可恢复到输出区 · 最多保存20条</div>
-            <div id="historyList"></div>
-            <div style="margin-top:12px;display:flex;gap:10px;justify-content:flex-end;">
-                <button class="btn btn-danger btn-sm history-clear-all" onclick="clearAllHistory()">🗑 清空全部</button>
-                <button class="btn btn-primary" onclick="closeModal('historyModal')">关闭</button>
+            <!-- 折叠术语解释 -->
+            <div class="glossary-collapse" onclick="toggleGlossary()">
+                📖 查看本方案涉及的专业术语
             </div>
-        </div>
-    </div>
+            <div id="glossaryContent" style="display:none;margin-top:10px;padding:12px 16px;background:#0f1620;border-radius:8px;border:1px solid #26303e;">
+                <div id="glossaryInner"></div>
+            </div>
 
-    <!-- ===== 弹窗 星体说明 ===== -->
-    <div class="modal-overlay" id="glossaryModal">
-        <div class="modal-box" style="max-width:640px;">
-            <button class="close-btn" onclick="closeModal('glossaryModal')">✕</button>
-            <h3>🔍 星体说明</h3>
-            <div class="sub">筛选面板中各选项的含义与适用场景</div>
-            <div class="glossary-group">
-                <div class="g-title">⭐ 基础星体</div>
-                <div class="g-item"><strong>9大行星</strong>（日月金木水火土罗计）— 核心解读基础，<span class="tag">永远保留</span></div>
-                <div class="g-item"><strong>外行星</strong>（天王/海王/冥王）— 世代影响，<span class="tag">进阶分析可选</span></div>
-            </div>
-            <div class="glossary-group">
-                <div class="g-title">🌀 辅助 Lagna</div>
-                <div class="g-item">Bhava/Hora/Ghati Lagna 等 — 用于特定事件分析（职业、财富、健康），<span class="tag">新手可不选</span></div>
-            </div>
-            <div class="glossary-group">
-                <div class="g-title">🌑 虚星 Upagrahas</div>
-                <div class="g-item">Mandi、Gulika 等 — 部分流派使用的特殊计算点，<span class="tag">一般可不选</span></div>
-            </div>
-            <div class="glossary-group">
-                <div class="g-title">📊 Sphuta 数据</div>
-                <div class="g-item">Prasna Marga、Yoga Sphuta 等 — 用于特定组合分析，<span class="tag">新手可不选</span></div>
-            </div>
-            <div class="glossary-group">
-                <div class="g-title">🏹 Arudha 系列</div>
-                <div class="g-item"><strong>Arudha Lagna</strong> — 反映社会形象和物质显现，<span class="tag">进阶可选</span></div>
-                <div class="g-item">其他 Arudha — 深度分析用，<span class="tag">新手可不选</span></div>
-            </div>
-            <div class="glossary-group">
-                <div class="g-title">⏳ 大运层级</div>
-                <div class="g-item"><strong>MD 主大运</strong> — 人生主框架，<span class="tag">必留</span></div>
-                <div class="g-item"><strong>AD 次大运</strong> — 看细运时开启</div>
-                <div class="g-item"><strong>Pratyantardasa 小小运</strong> — 看流年流月时开启，<span class="tag">极少用</span></div>
-            </div>
-            <div style="margin-top:12px;text-align:right;">
-                <button class="btn btn-primary" onclick="closeModal('glossaryModal')">知道了</button>
+            <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;">
+                <button class="btn btn-primary" onclick="copyPrompt()">📋 复制 Prompt</button>
+                <button class="btn btn-gold-outline" onclick="openAI('chatgpt')">🤖 ChatGPT</button>
+                <button class="btn btn-gold-outline" onclick="openAI('deepseek')">🧠 DeepSeek</button>
+                <button class="btn btn-gold-outline" onclick="openAI('claude')">🌐 Claude</button>
+                <button class="btn btn-danger" onclick="closeModal('promptResultModal')">关闭</button>
             </div>
         </div>
     </div>
@@ -291,6 +189,27 @@
     <!-- ===== Toast ===== -->
     <div class="toast" id="toast"></div>
 
-    <script src="app.js"></script>
+    <!-- ===== config 模块 ===== -->
+    <script src="js/config/common.js"></script>
+    <script src="js/config/love.js"></script>
+    <script src="js/config/career.js"></script>
+    <script src="js/config/wealth.js"></script>
+    <script src="js/config/health.js"></script>
+    <script src="js/config/study.js"></script>
+    <script src="js/config/dasha.js"></script>
+    <script src="js/config/index.js"></script>
+
+    <!-- ===== prompt-blocks 模块 ===== -->
+    <script src="js/prompt-blocks/role.js"></script>
+    <script src="js/prompt-blocks/user-needs.js"></script>
+    <script src="js/prompt-blocks/analysis-framework.js"></script>
+    <script src="js/prompt-blocks/synastry-phase.js"></script>
+    <script src="js/prompt-blocks/output-format.js"></script>
+    <script src="js/prompt-blocks/data-placeholder.js"></script>
+    <script src="js/prompt-blocks/index.js"></script>
+
+    <!-- ===== renderer + app ===== -->
+    <script src="js/renderer.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
