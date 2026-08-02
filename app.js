@@ -170,6 +170,7 @@ function cleanSingle(type) {
             const newBlocks = parser.extractBodyLongitudeBlocks(raw);
             let newBlockMap = {};
             for (const block of newBlocks) {
+                if (block.header === '=== 补充数据 ===') continue; // 框2不支持补充数据
                 const dType = parser.detectDivisionalType(block.header);
                 const filtered = parser.filterBodyList(block.lines, filters);
                 if (filtered.length > 0) {
@@ -179,6 +180,7 @@ function cleanSingle(type) {
             const oldBlocks = parser.extractBodyLongitudeBlocks(originalAllText);
             let oldBlockMap = {};
             for (const block of oldBlocks) {
+                if (block.header === '=== 补充数据 ===') continue;
                 const dType = parser.detectDivisionalType(block.header);
                 const filtered = parser.filterBodyList(block.lines, filters);
                 if (filtered.length > 0) {
@@ -248,7 +250,6 @@ function mergeAndGenerate() {
         return;
     }
 
-    // ===== 读取性别 =====
     const genderEl = document.querySelector('input[name="gender"]:checked');
     const gender = genderEl ? genderEl.value : 'female';
     const genderLabel = gender === 'male' ? 'Male' : 'Female';
@@ -258,8 +259,8 @@ function mergeAndGenerate() {
 
     try {
         let result = parser.mergeAll(full, div, dasha, transit, filters);
-        // ===== 在出生基础信息中插入性别 =====
-        result = result.replace('【出生基础信息】', `【出生基础信息】\nGender: ${genderLabel}`);
+        // 在 Natal Chart 后面插入性别
+        result = result.replace(/(Natal Chart\n)/, `$1Gender: ${genderLabel}\n`);
         document.getElementById('outputText').value = result;
         saveHistory(result);
         updateHistoryBadge();
@@ -519,11 +520,20 @@ window.JhoraParser = {
     extractBirthInfo: function(text) {
         const lines = text.split('\n');
         let birthLines = [];
+        let started = false;
         for (const line of lines) {
             const trimmed = line.trim();
+            // 跳过空行和路径行
+            if (!trimmed) continue;
+            if (/^[A-Z]:\\/.test(trimmed)) continue;
+            if (/^E:\\/.test(trimmed)) continue;
+            if (/^C:\\/.test(trimmed)) continue;
+            // 遇到 Body Longitude 停止
             if (/^Body\s+Longitude/.test(trimmed)) break;
             if (/Chara karaka|Ashtakavarga/i.test(trimmed)) break;
-            if (trimmed) birthLines.push(line.trim());
+            // 跳过网格图
+            if (/^\+-+/.test(trimmed)) break;
+            if (trimmed) birthLines.push(trimmed);
         }
         return birthLines.join('\n').trim();
     },
@@ -536,20 +546,53 @@ window.JhoraParser = {
         let inBodyList = false;
         let inSupplementary = false;
         let supplementaryLines = [];
+        let started = false;
+        let seenD1 = false;
 
         for (const line of lines) {
             const trimmed = line.trim();
             if (!trimmed) continue;
 
+            // 跳过路径行
+            if (/^[A-Z]:\\/.test(trimmed)) continue;
+            if (/^E:\\/.test(trimmed)) continue;
+            if (/^C:\\/.test(trimmed)) continue;
+
+            // 跳过网格图
+            if (/^\+-+/.test(trimmed)) continue;
+            if (/^\+-+/.test(trimmed) && /\|/.test(trimmed)) continue;
+
             const isHeader1 = /Body\s+Longitude\s*\(in\s+D-/i.test(trimmed);
             const isHeader2 = /Body\s+Longitude\s+Nakshatra\s+Pada\s+Rasi\s+Navamsa/i.test(trimmed);
 
-            const isSupplementary = /Ashtakavarga|Shadbala|Vaiseshikamsa|Vimsopaka|Chara karaka|Planet\s+Age|Planet\s+Activity/i.test(trimmed);
+            // 检测大运开始，停止收集补充数据
+            if (/Vimsottari Dasa:|Moola Dasa:|Ashtottari Dasa:|Kalachakra Dasa:|Narayana Dasa:|Sudasa:/i.test(trimmed)) {
+                if (supplementaryLines.length > 0) {
+                    blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
+                    supplementaryLines = [];
+                }
+                inSupplementary = false;
+                inBodyList = false;
+                continue;
+            }
+
+            const isSupplementary = /Ashtakavarga|Shadbala|Vaiseshikamsa|Vimsopaka|Chara karaka|Planet\s+Age|Planet\s+Activity|Shodasa Varga|Sapta Varga|Shad Varga/i.test(trimmed);
 
             if (isHeader1 || isHeader2) {
                 if (currentBlock.length > 0) {
                     blocks.push({ header: header, lines: currentBlock });
                     currentBlock = [];
+                }
+                // 检测是否是 D1，如果是则标记
+                if (/\(in\s+D-1/i.test(trimmed) || /Nakshatra\s+Pada\s+Rasi\s+Navamsa/i.test(trimmed)) {
+                    if (seenD1) {
+                        // 已经见过 D1 了，跳过重复的
+                        header = trimmed;
+                        inBodyList = true;
+                        inSupplementary = false;
+                        continue;
+                    }
+                    seenD1 = true;
                 }
                 header = trimmed;
                 inBodyList = true;
@@ -569,7 +612,7 @@ window.JhoraParser = {
             }
 
             if (inSupplementary) {
-                if (trimmed && !/^Body\s+Longitude/i.test(trimmed) && !/^Chara karaka/i.test(trimmed) && !/^Planet\s+Age/i.test(trimmed) && !/^Planet\s+Activity/i.test(trimmed)) {
+                if (trimmed && !/^Body\s+Longitude/i.test(trimmed) && !/^Chara karaka/i.test(trimmed) && !/^Planet\s+Age/i.test(trimmed) && !/^Planet\s+Activity/i.test(trimmed) && !/^\+-+/.test(trimmed)) {
                     supplementaryLines.push(trimmed);
                 } else if (trimmed === '' && supplementaryLines.length > 0) {
                     if (supplementaryLines.length > 0) {
@@ -577,6 +620,9 @@ window.JhoraParser = {
                         supplementaryLines = [];
                     }
                     inSupplementary = false;
+                } else if (/^\+-+/.test(trimmed)) {
+                    // 跳过网格图
+                    continue;
                 } else if (trimmed === '') {
                     // ignore
                 } else {
@@ -944,7 +990,6 @@ window.JhoraParser = {
     mergeAll: function(fullText, divText, dashaText, transitText, filters) {
         const outputSections = [];
 
-        // 出生基础信息
         let birthInfo = '';
         if (fullText) {
             birthInfo = this.extractBirthInfo(fullText);
@@ -1014,7 +1059,7 @@ window.JhoraParser = {
             outputSections.push(blockMap['__supplementary'].join('\n\n'));
         }
 
-        // Dasha 数据
+        // 如果框3没有独立粘贴大运，但从框1提取到了大运，也输出
         let dashaSource = dashaText;
         if (!dashaSource && fullText) {
             dashaSource = this.extractDashaFromFull(fullText);
