@@ -966,6 +966,16 @@ window.JhoraParser = {
     }
 };
 
+// ================================================================
+// ===== 跳转到提问助手 =====
+// ================================================================
+function goToPrompt() {
+    // 关闭当前弹窗
+    closeModal('aiModal');
+    // 跳转到提问助手
+    window.open('https://jhora-prompt.pages.dev', '_blank');
+}
+
 function goToPrompt() {
     const output = document.getElementById('outputText');
     const data = output.value.trim();
