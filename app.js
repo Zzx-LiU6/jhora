@@ -577,7 +577,8 @@ extractBodyLongitudeBlocks: function(text, filters) {
         if (type === 'shadbala') return f.shadbala === true;
         if (type === 'vaiseshikamsa') return f.vaiseshikamsa === true;
         if (type === 'removed') return false;
-        return false;
+        // 对于 'other' 类型，默认保留（只要不是被明确丢弃的类型）
+        return true;
     }
 
     for (const line of lines) {
@@ -665,7 +666,7 @@ extractBodyLongitudeBlocks: function(text, filters) {
         }
 
         if (inSupplementary) {
-            // 空行 → 提交数据
+            // 空行 → 提交
             if (trimmed === '') {
                 if (supplementaryLines.length > 0) {
                     blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
@@ -677,7 +678,7 @@ extractBodyLongitudeBlocks: function(text, filters) {
                 continue;
             }
 
-            // 遇到 Body Longitude → 提交数据，切换模式
+            // 遇到 Body Longitude → 提交，切换模式
             if (/^Body\s+Longitude/i.test(trimmed)) {
                 if (supplementaryLines.length > 0) {
                     blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
@@ -695,7 +696,7 @@ extractBodyLongitudeBlocks: function(text, filters) {
                 continue;
             }
 
-            // 遇到网格图 → 提交数据
+            // 遇到网格图 → 提交
             if (/^\+-+/.test(trimmed)) {
                 if (supplementaryLines.length > 0) {
                     blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
@@ -707,16 +708,16 @@ extractBodyLongitudeBlocks: function(text, filters) {
                 continue;
             }
 
-            if (currentSupplementType === 'skipped') {
+            // 检查是否属于被丢弃的类型（如 Planet Activity 等）
+            const currentType = getSupplementType(trimmed);
+            if (currentType === 'removed' || !shouldKeepSupplement(currentType)) {
+                // 跳过但不退出补充模式（后续可能还有其他数据）
                 continue;
             }
 
-            // 正常收集补充数据行
-            const currentType = getSupplementType(trimmed);
-            if (currentType === 'removed' || !shouldKeepSupplement(currentType)) {
-                continue;
-            }
-            if (currentType !== 'other' && currentType !== 'skipped' && prevSupplementType !== '' && prevSupplementType !== currentType) {
+            // 检测新的数据块类型，插入空行
+            if (currentType !== 'other' && currentType !== 'skipped' && 
+                prevSupplementType !== '' && prevSupplementType !== currentType) {
                 if (supplementaryLines.length > 0 && supplementaryLines[supplementaryLines.length - 1] !== '') {
                     supplementaryLines.push('');
                 }
@@ -724,6 +725,7 @@ extractBodyLongitudeBlocks: function(text, filters) {
                 currentSupplementType = currentType;
             }
 
+            // 收集所有其他行（包括数据行）
             supplementaryLines.push(trimmed);
             continue;
         }
