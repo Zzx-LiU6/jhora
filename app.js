@@ -967,6 +967,28 @@ window.JhoraParser = {
 };
 
 // ================================================================
+// ===== 跳转到提问助手，携带清洗后的数据 =====
+// ================================================================
+function goToPrompt() {
+    const output = document.getElementById('outputText');
+    const data = output.value.trim();
+
+    if (!data) {
+        showToast('⚠️ 输出区为空，请先生成星盘数据');
+        return;
+    }
+
+    // 用 localStorage 传递（长文本安全）
+    try {
+        localStorage.setItem('jhoraCleanData', data);
+        window.open('https://jhora-prompt.pages.dev', '_blank');
+    } catch (e) {
+        showToast('⚠️ 数据过大，请手动复制');
+        console.error(e);
+    }
+}
+
+// ================================================================
 // ===== 页面初始化 =====
 // ================================================================
 document.addEventListener('DOMContentLoaded', function() {
