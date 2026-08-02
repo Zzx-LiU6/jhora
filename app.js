@@ -966,9 +966,6 @@ window.JhoraParser = {
     }
 };
 
-// ================================================================
-// ===== 跳转到提问助手，携带清洗后的数据 =====
-// ================================================================
 function goToPrompt() {
     const output = document.getElementById('outputText');
     const data = output.value.trim();
@@ -978,14 +975,22 @@ function goToPrompt() {
         return;
     }
 
-    // 用 localStorage 传递（长文本安全）
-    try {
-        localStorage.setItem('jhoraCleanData', data);
-        window.open('https://jhora-prompt.pages.dev', '_blank');
-    } catch (e) {
-        showToast('⚠️ 数据过大，请手动复制');
-        console.error(e);
+    // 尝试自动复制到剪贴板（不阻塞跳转）
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(data)
+            .then(() => {
+                showToast('✅ 数据已复制到剪贴板，请到提问助手 Ctrl+V 粘贴');
+            })
+            .catch(() => {
+                showToast('📋 请手动复制数据（Ctrl+C）');
+            });
+    } else {
+        // 浏览器不支持剪贴板 API
+        showToast('📋 请手动复制数据（Ctrl+C）');
     }
+
+    // 无论如何都跳转
+    window.open('https://jhora-prompt.pages.dev', '_blank');
 }
 
 // ================================================================
