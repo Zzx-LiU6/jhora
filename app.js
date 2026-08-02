@@ -577,7 +577,6 @@ extractBodyLongitudeBlocks: function(text, filters) {
         if (type === 'shadbala') return f.shadbala === true;
         if (type === 'vaiseshikamsa') return f.vaiseshikamsa === true;
         if (type === 'removed') return false;
-        // 对于 'other' 类型，默认保留（只要不是被明确丢弃的类型）
         return true;
     }
 
@@ -585,12 +584,10 @@ extractBodyLongitudeBlocks: function(text, filters) {
         const trimmed = line.trim();
         if (!trimmed) continue;
 
-        // 跳过文件路径
         if (/^[A-Z]:\\/.test(trimmed)) continue;
         if (/^E:\\/.test(trimmed)) continue;
         if (/^C:\\/.test(trimmed)) continue;
 
-        // 跳过 ASCII 网格图
         if (/^\+-+/.test(trimmed)) {
             if (inSupplementary && supplementaryLines.length > 0) {
                 blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
@@ -602,7 +599,6 @@ extractBodyLongitudeBlocks: function(text, filters) {
             continue;
         }
 
-        // 检测大运开始 → 停止所有补充数据收集
         if (/Vimsottari Dasa:|Moola Dasa:|Ashtottari Dasa:|Kalachakra Dasa:|Narayana Dasa:|Sudasa:/i.test(trimmed)) {
             if (supplementaryLines.length > 0) {
                 blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
@@ -651,13 +647,7 @@ extractBodyLongitudeBlocks: function(text, filters) {
             const type = getSupplementType(trimmed);
             if (type === 'removed' || !shouldKeepSupplement(type)) {
                 currentSupplementType = 'skipped';
-                prevSupplementType = 'skipped';
                 continue;
-            }
-            if (type !== 'other' && type !== 'skipped' && prevSupplementType !== '' && prevSupplementType !== type) {
-                if (supplementaryLines.length > 0 && supplementaryLines[supplementaryLines.length - 1] !== '') {
-                    supplementaryLines.push('');
-                }
             }
             currentSupplementType = type;
             prevSupplementType = type;
@@ -666,7 +656,6 @@ extractBodyLongitudeBlocks: function(text, filters) {
         }
 
         if (inSupplementary) {
-            // 空行 → 提交
             if (trimmed === '') {
                 if (supplementaryLines.length > 0) {
                     blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
@@ -678,7 +667,6 @@ extractBodyLongitudeBlocks: function(text, filters) {
                 continue;
             }
 
-            // 遇到 Body Longitude → 提交，切换模式
             if (/^Body\s+Longitude/i.test(trimmed)) {
                 if (supplementaryLines.length > 0) {
                     blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
@@ -696,7 +684,6 @@ extractBodyLongitudeBlocks: function(text, filters) {
                 continue;
             }
 
-            // 遇到网格图 → 提交
             if (/^\+-+/.test(trimmed)) {
                 if (supplementaryLines.length > 0) {
                     blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
@@ -708,29 +695,32 @@ extractBodyLongitudeBlocks: function(text, filters) {
                 continue;
             }
 
-            // 检查是否属于被丢弃的类型（如 Planet Activity 等）
-            const currentType = getSupplementType(trimmed);
-            if (currentType === 'removed' || !shouldKeepSupplement(currentType)) {
-                // 跳过但不退出补充模式（后续可能还有其他数据）
+            // 检测新的数据块标题
+            const newType = getSupplementType(trimmed);
+            if (newType !== 'other' && newType !== 'skipped' && newType !== currentSupplementType) {
+                if (supplementaryLines.length > 0) {
+                    blocks.push({ header: '=== 补充数据 ===', lines: supplementaryLines });
+                    supplementaryLines = [];
+                }
+                currentSupplementType = newType;
+                prevSupplementType = newType;
+                if (newType === 'removed' || !shouldKeepSupplement(newType)) {
+                    currentSupplementType = 'skipped';
+                    continue;
+                }
+                supplementaryLines.push(trimmed);
                 continue;
             }
 
-            // 检测新的数据块类型，插入空行
-            if (currentType !== 'other' && currentType !== 'skipped' && 
-                prevSupplementType !== '' && prevSupplementType !== currentType) {
-                if (supplementaryLines.length > 0 && supplementaryLines[supplementaryLines.length - 1] !== '') {
-                    supplementaryLines.push('');
-                }
-                prevSupplementType = currentType;
-                currentSupplementType = currentType;
+            // 如果当前块是被丢弃的类型，跳过所有行
+            if (currentSupplementType === 'skipped') {
+                continue;
             }
 
-            // 收集所有其他行（包括数据行）
             supplementaryLines.push(trimmed);
             continue;
         }
 
-        // 正常星体行收集
         if (inBodyList && /^[A-Za-z]/.test(trimmed) && /[\d°']/.test(trimmed)) {
             currentBlock.push(trimmed);
             continue;
