@@ -189,7 +189,8 @@ function cleanSingle(type) {
 
     try {
         if (type === 'full') {
-            const birth = parser.extractBirthInfo(raw);
+            const keepFullBirth = document.getElementById('fKeepFullBirth').checked;
+            const birth = parser.extractBirthInfo(raw, keepFullBirth);
             const blocks = parser.extractBodyLongitudeBlocks(raw, filters);
             let parts = [];
             if (birth) parts.push('【出生基础信息】\n' + birth);
@@ -304,8 +305,11 @@ function mergeAndGenerate() {
     const filters = getFilterState();
     const parser = window.JhoraParser;
 
+    // ===== 新增：读取复选框状态 =====
+    const keepFullBirth = document.getElementById('fKeepFullBirth').checked;
+
     try {
-        let result = parser.mergeAll(full, div, dasha, transit, filters);
+        let result = parser.mergeAll(full, div, dasha, transit, filters, keepFullBirth);  // 新增参数
         result = result.replace(/(Natal Chart\n)/, `$1Gender: ${genderLabel}\n`);
         document.getElementById('outputText').value = result;
         saveHistory(result);
