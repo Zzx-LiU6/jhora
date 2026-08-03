@@ -262,7 +262,6 @@ body {
     grid-template-columns: 1fr 1fr;
     gap: 12px 20px;
     margin: 12px 0 8px;
-    align-items: start;
 }
 @media (max-width:550px) {
     .filter-grid {
