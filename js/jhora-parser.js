@@ -2,11 +2,13 @@
 // ===== 核心解析引擎 JhoraParser =====
 // ================================================================
 window.JhoraParser = {
-    extractBirthInfo: function(text) {
+    extractBirthInfo: function(text, keepFull) {
+        console.log('🔍 extractBirthInfo 收到 keepFull:', keepFull);
         const lines = text.split('\n');
         let birthLines = [];
         let i = 0;
 
+        // 核心白名单
         const keepPrefixes = [
             'Natal Chart',
             'Gender:',
@@ -17,45 +19,62 @@ window.JhoraParser = {
             'Ayanamsa:'
         ];
 
+        // 如果 keepFull 为 true，额外保留这些
+        const fullPrefixes = [
+            'Lunar Yr-Mo:',
+            'Tithi:',
+            'Vedic Weekday:',
+            'Yoga:',
+            'Karana:',
+            'Hora Lord:',
+            'Sunrise:',
+            'Sunset:',
+            'Sidereal Time:'
+        ];
+
         while (i < lines.length) {
             const trimmed = lines[i].trim();
             if (!trimmed) { i++; continue; }
 
-            // 跳过文件路径
             if (/^[A-Z]:\\/.test(trimmed)) { i++; continue; }
             if (/^E:\\/.test(trimmed)) { i++; continue; }
             if (/^C:\\/.test(trimmed)) { i++; continue; }
 
-            // 遇到 Body Longitude 停止
             if (/^Body\s+Longitude/.test(trimmed)) break;
             if (/Chara karaka|Ashtakavarga/i.test(trimmed)) break;
             if (/^\+-+/.test(trimmed)) break;
 
-            // 特殊处理 Place: 行 → 合并下一行的城市名
+            // Place: 行特殊处理
             if (trimmed.startsWith('Place:')) {
-                // 提取经纬度部分（去掉 "Place:" 前缀）
                 const coords = trimmed.replace(/^Place:\s*/, '').trim();
                 let city = '';
-                // 看下一行是不是城市名称（不是空行、不是以字母+冒号开头的字段）
                 if (i + 1 < lines.length) {
                     const nextLine = lines[i + 1].trim();
-                    // 如果下一行不包含冒号，且不是空行，就当作城市名
                     if (nextLine && !/^[A-Za-z]+:/.test(nextLine)) {
                         city = nextLine;
-                        i++; // 消耗掉城市行
+                        i++;
                     }
                 }
-                // 合并成一行
                 const merged = city ? `Place: ${coords} (${city})` : `Place: ${coords}`;
                 birthLines.push(merged);
                 i++;
                 continue;
             }
 
-            // 检查是否匹配白名单
+            // 检查核心白名单
             const shouldKeep = keepPrefixes.some(p => trimmed.startsWith(p));
             if (shouldKeep) {
                 birthLines.push(trimmed);
+                i++;
+                continue;
+            }
+
+            // 如果勾选了“保留完整出生信息”，检查扩展白名单
+            if (keepFull) {
+                const shouldKeepFull = fullPrefixes.some(p => trimmed.startsWith(p));
+                if (shouldKeepFull) {
+                    birthLines.push(trimmed);
+                }
             }
 
             i++;
@@ -594,12 +613,12 @@ extractBodyLongitudeBlocks: function(text, filters) {
         return result;
     },
 
-    mergeAll: function(fullText, divText, dashaText, transitText, filters) {
+    mergeAll: function(fullText, divText, dashaText, transitText, filters, keepFullBirth) {
         const outputSections = [];
 
         let birthInfo = '';
         if (fullText) {
-            birthInfo = this.extractBirthInfo(fullText);
+            birthInfo = this.extractBirthInfo(fullText, keepFullBirth);  // 传参
         }
         if (birthInfo) {
             outputSections.push('【出生基础信息】');
