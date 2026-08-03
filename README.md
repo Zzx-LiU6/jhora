@@ -38,9 +38,11 @@
 ## 项目结构
 ```text
 /
-├── index.html  # 页面结构
-├── style.css   # 样式
-└── app.js      # 完整逻辑
+├── index.html          # 页面结构
+├── style.css           # 样式
+└── js/
+    ├── app.js          # UI 逻辑 + 筛选 + 操作
+    └── jhora-parser.js # 星盘解析引擎
 ```
 
 ## License
