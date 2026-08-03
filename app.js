@@ -56,27 +56,37 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
 function getFilterState() {
     return {
         outer: document.getElementById('fOuter').checked,
+        // 辅助 Lagna（9 个）
         bhava: document.getElementById('fBhava').checked,
+        hora: document.getElementById('fHora').checked,
+        ghati: document.getElementById('fGhati').checked,
         vighati: document.getElementById('fVighati').checked,
         varnada: document.getElementById('fVarnada').checked,
         sree: document.getElementById('fSree').checked,
         pranapada: document.getElementById('fPranapada').checked,
         indu: document.getElementById('fIndu').checked,
         bhrigu: document.getElementById('fBhrigu').checked,
+        // 虚星
         mandi: document.getElementById('fMandi').checked,
         gulika: document.getElementById('fGulika').checked,
-        otherUpagraha: document.getElementById('fOtherUpagraha').checked,
+        // Sphuta
         sphutaPrasna: document.getElementById('fSphutaPrasna').checked,
         sphutaYoga: document.getElementById('fSphutaYoga').checked,
+        // Arudha
         arudhaLagna: document.getElementById('fArudhaLagna').checked,
         bhavaArudha: document.getElementById('fBhavaArudha').checked,
         grahaArudha: document.getElementById('fGrahaArudha').checked,
         varnadas: document.getElementById('fVarnadas').checked,
         kunda: document.getElementById('fKunda').checked,
-        ad: document.getElementById('fAD').checked,
-        pratyantardasa: document.getElementById('fPratyantardasa').checked,
+        // 力量与Jaimini
+        charaKaraka: document.getElementById('fCharaKaraka').checked,
+        ashtakavarga: document.getElementById('fAshtakavarga').checked,
+        vimsopaka: document.getElementById('fVimsopaka').checked,
         shadbala: document.getElementById('fShadbala').checked,
         vaiseshikamsa: document.getElementById('fVaiseshikamsa').checked,
+        // 大运
+        ad: document.getElementById('fAD').checked,
+        pratyantardasa: document.getElementById('fPratyantardasa').checked,
     };
 }
 
@@ -91,11 +101,41 @@ function setGroup(val) {
 function resetAllFilters(showToastMsg) {
     const allCheckboxes = document.querySelectorAll('#filterModal input[type="checkbox"]:not(:disabled)');
     allCheckboxes.forEach(cb => { cb.checked = false; });
+
+    // 基础星体
     document.getElementById('fOuter').checked = false;
-    document.getElementById('fAD').checked = false;
-    document.getElementById('fPratyantardasa').checked = false;
+    // 辅助 Lagna（9 个全部关闭）
+    document.getElementById('fBhava').checked = false;
+    document.getElementById('fHora').checked = false;
+    document.getElementById('fGhati').checked = false;
+    document.getElementById('fVighati').checked = false;
+    document.getElementById('fVarnada').checked = false;
+    document.getElementById('fSree').checked = false;
+    document.getElementById('fPranapada').checked = false;
+    document.getElementById('fIndu').checked = false;
+    document.getElementById('fBhrigu').checked = false;
+    // 虚星
+    document.getElementById('fMandi').checked = false;
+    document.getElementById('fGulika').checked = false;
+    // Sphuta
+    document.getElementById('fSphutaPrasna').checked = false;
+    document.getElementById('fSphutaYoga').checked = false;
+    // Arudha
+    document.getElementById('fArudhaLagna').checked = false;
+    document.getElementById('fBhavaArudha').checked = false;
+    document.getElementById('fGrahaArudha').checked = false;
+    document.getElementById('fVarnadas').checked = false;
+    document.getElementById('fKunda').checked = false;
+    // 力量与Jaimini（核心三个默认开启）
+    document.getElementById('fCharaKaraka').checked = true;
+    document.getElementById('fAshtakavarga').checked = true;
+    document.getElementById('fVimsopaka').checked = true;
     document.getElementById('fShadbala').checked = false;
     document.getElementById('fVaiseshikamsa').checked = false;
+    // 大运
+    document.getElementById('fAD').checked = false;
+    document.getElementById('fPratyantardasa').checked = false;
+
     document.getElementById('presetMinimal').classList.remove('active-preset');
     document.getElementById('presetPro').classList.remove('active-preset');
     if (showToastMsg !== false) showToast('↺ 已重置');
@@ -106,14 +146,15 @@ function applyPreset(mode) {
     if (mode === 'minimal') {
         document.getElementById('fOuter').checked = false;
         setGroup(false, 'fBhava', 'fVighati', 'fVarnada', 'fSree', 'fPranapada', 'fIndu', 'fBhrigu');
-        setGroup(false, 'fMandi', 'fGulika', 'fOtherUpagraha');
+        setGroup(false, 'fMandi', 'fGulika');
         setGroup(false, 'fSphutaPrasna', 'fSphutaYoga');
         setGroup(false, 'fArudhaLagna', 'fBhavaArudha', 'fGrahaArudha', 'fVarnadas', 'fKunda');
-        document.getElementById('fAD').checked = false;
-        document.getElementById('fPratyantardasa').checked = false;
-        // ===== 极简模式：两个都不选 =====
+        // 核心数据保持默认选中（resetAllFilters 已设）
+        // 进阶数据全部关闭
         document.getElementById('fShadbala').checked = false;
         document.getElementById('fVaiseshikamsa').checked = false;
+        document.getElementById('fAD').checked = false;
+        document.getElementById('fPratyantardasa').checked = false;
         document.getElementById('presetMinimal').classList.add('active-preset');
         document.getElementById('presetPro').classList.remove('active-preset');
         document.getElementById('modeBadge').textContent = '极简模式已启用';
@@ -123,15 +164,15 @@ function applyPreset(mode) {
         setGroup(false, 'fBhava', 'fVighati', 'fVarnada', 'fSree', 'fPranapada', 'fIndu', 'fBhrigu');
         document.getElementById('fMandi').checked = true;
         document.getElementById('fGulika').checked = true;
-        document.getElementById('fOtherUpagraha').checked = false;
         setGroup(false, 'fSphutaPrasna', 'fSphutaYoga');
         document.getElementById('fArudhaLagna').checked = true;
         setGroup(false, 'fBhavaArudha', 'fGrahaArudha', 'fVarnadas', 'fKunda');
-        document.getElementById('fAD').checked = false;
-        document.getElementById('fPratyantardasa').checked = false;
-        // ===== 专业模式：两个都勾选 =====
+        // 核心数据保持默认选中（resetAllFilters 已设）
+        // 进阶数据全部开启
         document.getElementById('fShadbala').checked = true;
         document.getElementById('fVaiseshikamsa').checked = true;
+        document.getElementById('fAD').checked = false;
+        document.getElementById('fPratyantardasa').checked = false;
         document.getElementById('presetPro').classList.add('active-preset');
         document.getElementById('presetMinimal').classList.remove('active-preset');
         document.getElementById('modeBadge').textContent = '专业模式已启用';
@@ -530,21 +571,62 @@ window.JhoraParser = {
     extractBirthInfo: function(text) {
         const lines = text.split('\n');
         let birthLines = [];
-        let started = false;
-        for (const line of lines) {
-            const trimmed = line.trim();
-            // 跳过空行和路径行
-            if (!trimmed) continue;
-            if (/^[A-Z]:\\/.test(trimmed)) continue;
-            if (/^E:\\/.test(trimmed)) continue;
-            if (/^C:\\/.test(trimmed)) continue;
+        let i = 0;
+
+        const keepPrefixes = [
+            'Natal Chart',
+            'Gender:',
+            'Date:',
+            'Time:',
+            'Time Zone:',
+            'Nakshatra:',
+            'Ayanamsa:'
+        ];
+
+        while (i < lines.length) {
+            const trimmed = lines[i].trim();
+            if (!trimmed) { i++; continue; }
+
+            // 跳过文件路径
+            if (/^[A-Z]:\\/.test(trimmed)) { i++; continue; }
+            if (/^E:\\/.test(trimmed)) { i++; continue; }
+            if (/^C:\\/.test(trimmed)) { i++; continue; }
+
             // 遇到 Body Longitude 停止
             if (/^Body\s+Longitude/.test(trimmed)) break;
             if (/Chara karaka|Ashtakavarga/i.test(trimmed)) break;
-            // 跳过网格图
             if (/^\+-+/.test(trimmed)) break;
-            if (trimmed) birthLines.push(trimmed);
+
+            // 特殊处理 Place: 行 → 合并下一行的城市名
+            if (trimmed.startsWith('Place:')) {
+                // 提取经纬度部分（去掉 "Place:" 前缀）
+                const coords = trimmed.replace(/^Place:\s*/, '').trim();
+                let city = '';
+                // 看下一行是不是城市名称（不是空行、不是以字母+冒号开头的字段）
+                if (i + 1 < lines.length) {
+                    const nextLine = lines[i + 1].trim();
+                    // 如果下一行不包含冒号，且不是空行，就当作城市名
+                    if (nextLine && !/^[A-Za-z]+:/.test(nextLine)) {
+                        city = nextLine;
+                        i++; // 消耗掉城市行
+                    }
+                }
+                // 合并成一行
+                const merged = city ? `Place: ${coords} (${city})` : `Place: ${coords}`;
+                birthLines.push(merged);
+                i++;
+                continue;
+            }
+
+            // 检查是否匹配白名单
+            const shouldKeep = keepPrefixes.some(p => trimmed.startsWith(p));
+            if (shouldKeep) {
+                birthLines.push(trimmed);
+            }
+
+            i++;
         }
+
         return birthLines.join('\n').trim();
     },
 
@@ -560,7 +642,13 @@ extractBodyLongitudeBlocks: function(text, filters) {
     let currentSupplementType = '';
     let prevSupplementType = '';
 
-    const f = filters || { shadbala: false, vaiseshikamsa: false };
+    const f = filters || { 
+        charaKaraka: true, 
+        ashtakavarga: true, 
+        vimsopaka: true,
+        shadbala: false, 
+        vaiseshikamsa: false 
+    };
 
     function getSupplementType(line) {
         if (/^Chara karaka/i.test(line)) return 'charaKaraka';
@@ -573,11 +661,13 @@ extractBodyLongitudeBlocks: function(text, filters) {
     }
 
     function shouldKeepSupplement(type) {
-        if (type === 'charaKaraka' || type === 'ashtakavarga' || type === 'vimsopaka') return true;
+        if (type === 'charaKaraka') return f.charaKaraka !== false;
+        if (type === 'ashtakavarga') return f.ashtakavarga !== false;
+        if (type === 'vimsopaka') return f.vimsopaka !== false;
         if (type === 'shadbala') return f.shadbala === true;
         if (type === 'vaiseshikamsa') return f.vaiseshikamsa === true;
         if (type === 'removed') return false;
-        return true;
+        return false;
     }
 
     for (const line of lines) {
