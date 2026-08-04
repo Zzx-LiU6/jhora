@@ -309,84 +309,101 @@ extractBodyLongitudeBlocks: function(text, filters) {
     },
 
     filterBodyList: function(lines, filters) {
-        const excludeKeywords = [
-            'Sphuta', 'Tithi', 'Yoga', 'Avayoga',
-            'Bhava', 'Hora', 'Ghati', 'Vighati', 'Varnada',
-            'Sree', 'Pranapada', 'Indu', 'Bhrigu',
-            'Dhooma', 'Vyatipata', 'Parivesha', 'Indra Chapa',
-            'Upaketu', 'Kaala', 'Mrityu', 'Artha Prahara',
-            'Yama Ghantaka', 'AL', 'A2', 'A3', 'A4', 'A5',
-            'A6', 'A7', 'A8', 'A9', 'A10', 'A11', 'UL',
-            'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8',
-            'V9', 'V10', 'V11', 'V12', 'Kunda'
-        ];
         const keep = [];
         const forced = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Rahu', 'Ketu', 'Lagna'];
-        const outer = ['Uranus', 'Neptune', 'Pluto'];
-        const lagnaGroups = {
-            bhava: ['Bhava'],
-            hora: ['Hora'],
-            ghati: ['Ghati'],
-            vighati: ['Vighati'],
-            varnada: ['Varnada'],
-            sree: ['Sree'],
-            pranapada: ['Pranapada'],
-            indu: ['Indu'],
-            bhrigu: ['Bhrigu']
+
+        const userSelectableMap = {
+            // 基础星体
+            outer: ['Uranus', 'Neptune', 'Pluto'],
+            // 辅助 Lagna（常用 + 其他打包）
+            sree: ['Sree Lagna'],
+            varnada: ['Varnada Lagna'],
+            bhrigu: ['Bhrigu Bindu'],
+            otherLagna: ['Bhava Lagna', 'Hora Lagna', 'Ghati Lagna', 'Vighati Lagna', 'Pranapada Lagna', 'Indu Lagna'],
+            // Arudha
+            al: ['AL'],
+            ul: ['UL'],
+            a2: ['A2'],
+            a3: ['A3'],
+            a4: ['A4'],
+            a5: ['A5'],
+            a6: ['A6'],
+            a7: ['A7'],
+            a8: ['A8'],
+            a9: ['A9'],
+            a10: ['A10'],
+            a11: ['A11'],
+            // 高阶 Pada
+            varnadas: ['V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11', 'V12'],
+            kunda: ['Kunda'],
+            // 虚星
+            maandi: ['Maandi'],
+            gulika: ['Gulika'],
+            otherUpagraha: ['Dhooma', 'Vyatipata', 'Parivesha', 'Indra Chapa', 'Upaketu', 'Kaala', 'Mrityu', 'Artha Prahara', 'Yama Ghantaka'],
+            // Sphuta
+            //sphutaPrasna: ['Prasna Marga Sphuta'],
+            sphutaYoga: ['Yoga Sphuta', 'Avayoga Sphuta'],
+            otherSphuta: ['Prana Sphuta', 'Deha Sphuta', 'Mrityu Sphuta', 'Sookshma TriSphuta', 'Tithi Sphuta', 'Rahu Tithi Sphuta', 'Kshetra Sphuta', 'Beeja Sphuta', 'TriSphuta', 'ChatusSphuta', 'PanchaSphuta']
         };
-        const upagrahaList = ['Mandi', 'Gulika', 'Dhooma', 'Vyatipata', 'Parivesha', 'Indra Chapa', 'Upaketu', 'Kaala',
-            'Mrityu', 'Artha Prahara', 'Yama Ghantaka'
-        ];
-        const sphutaList = ['Prasna Marga Sphuta', 'Prana Sphuta', 'Deha Sphuta', 'Mrityu Sphuta',
-            'Sookshma TriSphuta', 'Tithi Sphuta', 'Rahu Tithi Sphuta', 'Kshetra Sphuta', 'Beeja Sphuta',
-            'TriSphuta', 'ChatusSphuta', 'PanchaSphuta', 'Yoga Sphuta', 'Avayoga Sphuta'
-        ];
 
         for (const line of lines) {
             const trimmed = line.trim();
             const firstWord = trimmed.match(/^([^\s\-]+)/)?.[1] || '';
-            const hasExcludeKeyword = excludeKeywords.some(kw => trimmed.includes(kw));
 
-            if (forced.includes(firstWord) && !hasExcludeKeyword) {
+            // 1. 强制保留
+            if (forced.includes(firstWord)) {
                 keep.push(line);
                 continue;
             }
-            if (filters.outer && outer.includes(firstWord) && !hasExcludeKeyword) {
-                keep.push(line);
-                continue;
-            }
-            let matchedLagna = false;
-            for (const [key, words] of Object.entries(lagnaGroups)) {
-                if (filters[key] && words.includes(firstWord)) {
-                    matchedLagna = true;
-                    break;
+
+            // 2. 检查用户是否勾选了某个选项
+            let userSelected = false;
+            for (const [key, keywords] of Object.entries(userSelectableMap)) {
+                if (filters[key]) {
+                    const matched = keywords.some(kw => {
+                        if (key === 'al') {
+                            // AL 精确匹配
+                            return trimmed === kw || trimmed.startsWith(kw + ' ');
+                        }
+                        if (key === 'ul') {
+                            return trimmed === kw || trimmed.startsWith(kw + ' ');
+                        }
+                        return trimmed.includes(kw);
+                    });
+                    if (matched) {
+                        keep.push(line);
+                        userSelected = true;
+                        break;
+                    }
                 }
             }
-            if (matchedLagna) {
-                keep.push(line);
+            if (userSelected) continue;
+
+            if (trimmed.includes('Rahu Tithi Sphuta')) {
                 continue;
             }
-            if (filters.mandi && firstWord === 'Mandi') { keep.push(line); continue; }
-            if (filters.gulika && firstWord === 'Gulika') { keep.push(line); continue; }
-            if (filters.otherUpagraha && upagrahaList.includes(firstWord)) {
+
+            // 3. 默认排除（excludeKeywords）
+            const excludeKeywords = [
+                'Sphuta', 'Tithi', 'Yoga', 'Avayoga',
+                'Bhava', 'Hora', 'Ghati', 'Vighati', 'Varnada',
+                'Sree', 'Pranapada', 'Indu', 'Bhrigu',
+                'Dhooma', 'Vyatipata', 'Parivesha', 'Indra Chapa',
+                'Upaketu', 'Kaala', 'Mrityu', 'Artha Prahara',
+                'Yama Ghantaka', 'AL', 'A2', 'A3', 'A4', 'A5',
+                'A6', 'A7', 'A8', 'A9', 'A10', 'A11', 'UL',
+                'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8',
+                'V9', 'V10', 'V11', 'V12', 'Kunda',
+                'Uranus', 'Neptune', 'Pluto',
+                'Maandi', 'Gulika'
+            ];
+
+            const hasExcludeKeyword = excludeKeywords.some(kw => trimmed.includes(kw));
+            if (!hasExcludeKeyword) {
                 keep.push(line);
-                continue;
             }
-            const isSphuta = sphutaList.some(s => trimmed.includes(s));
-            if (filters.sphutaPrasna && isSphuta) { keep.push(line); continue; }
-            if (filters.sphutaYoga && (trimmed.includes('Yoga Sphuta') || trimmed.includes('Avayoga Sphuta'))) {
-                keep.push(line);
-                continue;
-            }
-            if (filters.arudhaLagna && (trimmed.includes('AL') || trimmed.includes('Arudha Lagna'))) {
-                keep.push(line);
-                continue;
-            }
-            if (filters.bhavaArudha && trimmed.includes('Bhava Arudha')) { keep.push(line); continue; }
-            if (filters.grahaArudha && trimmed.includes('Graha Arudha')) { keep.push(line); continue; }
-            if (filters.varnadas && /^V[2-9]\b|^V1[0-2]?/.test(firstWord)) { keep.push(line); continue; }
-            if (filters.kunda && firstWord === 'Kunda') { keep.push(line); continue; }
         }
+
         return keep;
     },
 
@@ -525,17 +542,34 @@ extractBodyLongitudeBlocks: function(text, filters) {
         const lines = [];
         const showAD = filters.ad;
         const showPD = filters.pratyantardasa;
-        const mdNames = Object.keys(tree.mdMap).sort();
+
+        // 按 MD 开始时间排序，而不是按字母
+        const mdNames = Object.keys(tree.mdMap).sort((a, b) => {
+            const dateA = new Date(tree.mdMap[a].start);
+            const dateB = new Date(tree.mdMap[b].start);
+            return dateA - dateB;
+        });
+
         for (const mdName of mdNames) {
             const md = tree.mdMap[mdName];
             lines.push(`${mdName} MD: ${md.start} ~ ${md.end}`);
             if (showAD) {
-                const adNames = Object.keys(md.adMap).sort();
+                // AD 和 PD 也按时间排序
+                const adNames = Object.keys(md.adMap).sort((a, b) => {
+                    const dateA = new Date(md.adMap[a].start);
+                    const dateB = new Date(md.adMap[b].start);
+                    return dateA - dateB;
+                });
                 for (const adName of adNames) {
                     const ad = md.adMap[adName];
                     lines.push(`  ${adName} AD: ${ad.start} ~ ${ad.end}`);
                     if (showPD && ad.pdList.length > 0) {
-                        for (const pd of ad.pdList) {
+                        const pdSorted = ad.pdList.sort((a, b) => {
+                            const dateA = new Date(a.start);
+                            const dateB = new Date(b.start);
+                            return dateA - dateB;
+                        });
+                        for (const pd of pdSorted) {
                             lines.push(`    ${pd.name}: ${pd.start} ~ ${pd.end}`);
                         }
                     }
