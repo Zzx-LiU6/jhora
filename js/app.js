@@ -55,29 +55,37 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
 // ================================================================
 function getFilterState() {
     return {
+        // 基础星体
         outer: document.getElementById('fOuter').checked,
-        // 辅助 Lagna（9 个）
-        bhava: document.getElementById('fBhava').checked,
-        hora: document.getElementById('fHora').checked,
-        ghati: document.getElementById('fGhati').checked,
-        vighati: document.getElementById('fVighati').checked,
-        varnada: document.getElementById('fVarnada').checked,
+        // 辅助 Lagna
         sree: document.getElementById('fSree').checked,
-        pranapada: document.getElementById('fPranapada').checked,
-        indu: document.getElementById('fIndu').checked,
+        varnada: document.getElementById('fVarnada').checked,
         bhrigu: document.getElementById('fBhrigu').checked,
-        // 虚星
-        mandi: document.getElementById('fMandi').checked,
-        gulika: document.getElementById('fGulika').checked,
-        // Sphuta
-        sphutaPrasna: document.getElementById('fSphutaPrasna').checked,
-        sphutaYoga: document.getElementById('fSphutaYoga').checked,
+        otherLagna: document.getElementById('fOtherLagna').checked,
         // Arudha
-        arudhaLagna: document.getElementById('fArudhaLagna').checked,
-        bhavaArudha: document.getElementById('fBhavaArudha').checked,
-        grahaArudha: document.getElementById('fGrahaArudha').checked,
+        al: document.getElementById('fAL').checked,
+        ul: document.getElementById('fUL').checked,
+        a2: document.getElementById('fA2').checked,
+        a3: document.getElementById('fA3').checked,
+        a4: document.getElementById('fA4').checked,
+        a5: document.getElementById('fA5').checked,
+        a6: document.getElementById('fA6').checked,
+        a7: document.getElementById('fA7').checked,
+        a8: document.getElementById('fA8').checked,
+        a9: document.getElementById('fA9').checked,
+        a10: document.getElementById('fA10').checked,
+        a11: document.getElementById('fA11').checked,
+        // 高阶 Pada
         varnadas: document.getElementById('fVarnadas').checked,
         kunda: document.getElementById('fKunda').checked,
+        // 虚星
+        maandi: document.getElementById('fMaandi').checked,
+        gulika: document.getElementById('fGulika').checked,
+        otherUpagraha: document.getElementById('fOtherUpagraha').checked,
+        // Sphuta
+        //sphutaPrasna: document.getElementById('fSphutaPrasna').checked,
+        sphutaYoga: document.getElementById('fSphutaYoga').checked,
+        otherSphuta: document.getElementById('fOtherSphuta').checked,
         // 力量与Jaimini
         charaKaraka: document.getElementById('fCharaKaraka').checked,
         ashtakavarga: document.getElementById('fAshtakavarga').checked,
@@ -104,28 +112,35 @@ function resetAllFilters(showToastMsg) {
 
     // 基础星体
     document.getElementById('fOuter').checked = false;
-    // 辅助 Lagna（9 个全部关闭）
-    document.getElementById('fBhava').checked = false;
-    document.getElementById('fHora').checked = false;
-    document.getElementById('fGhati').checked = false;
-    document.getElementById('fVighati').checked = false;
-    document.getElementById('fVarnada').checked = false;
+    // 辅助 Lagna
     document.getElementById('fSree').checked = false;
-    document.getElementById('fPranapada').checked = false;
-    document.getElementById('fIndu').checked = false;
+    document.getElementById('fVarnada').checked = false;
     document.getElementById('fBhrigu').checked = false;
-    // 虚星
-    document.getElementById('fMandi').checked = false;
-    document.getElementById('fGulika').checked = false;
-    // Sphuta
-    document.getElementById('fSphutaPrasna').checked = false;
-    document.getElementById('fSphutaYoga').checked = false;
+    document.getElementById('fOtherLagna').checked = false;
     // Arudha
-    document.getElementById('fArudhaLagna').checked = false;
-    document.getElementById('fBhavaArudha').checked = false;
-    document.getElementById('fGrahaArudha').checked = false;
+    document.getElementById('fAL').checked = false;
+    document.getElementById('fUL').checked = false;
+    document.getElementById('fA2').checked = false;
+    document.getElementById('fA3').checked = false;
+    document.getElementById('fA4').checked = false;
+    document.getElementById('fA5').checked = false;
+    document.getElementById('fA6').checked = false;
+    document.getElementById('fA7').checked = false;
+    document.getElementById('fA8').checked = false;
+    document.getElementById('fA9').checked = false;
+    document.getElementById('fA10').checked = false;
+    document.getElementById('fA11').checked = false;
+    // 高阶 Pada
     document.getElementById('fVarnadas').checked = false;
     document.getElementById('fKunda').checked = false;
+    // 虚星
+    document.getElementById('fMaandi').checked = false;
+    document.getElementById('fGulika').checked = false;
+    document.getElementById('fOtherUpagraha').checked = false;
+    // Sphuta
+    //document.getElementById('fSphutaPrasna').checked = false;
+    document.getElementById('fSphutaYoga').checked = false;
+    document.getElementById('fOtherSphuta').checked = false;
     // 力量与Jaimini（核心三个默认开启）
     document.getElementById('fCharaKaraka').checked = true;
     document.getElementById('fAshtakavarga').checked = true;
@@ -144,31 +159,71 @@ function resetAllFilters(showToastMsg) {
 function applyPreset(mode) {
     resetAllFilters(false);
     if (mode === 'minimal') {
+        // 极简模式：只保留核心数据，其他全部关闭
         document.getElementById('fOuter').checked = false;
-        setGroup(false, 'fBhava', 'fVighati', 'fVarnada', 'fSree', 'fPranapada', 'fIndu', 'fBhrigu');
-        setGroup(false, 'fMandi', 'fGulika');
-        setGroup(false, 'fSphutaPrasna', 'fSphutaYoga');
-        setGroup(false, 'fArudhaLagna', 'fBhavaArudha', 'fGrahaArudha', 'fVarnadas', 'fKunda');
+        document.getElementById('fSree').checked = false;
+        document.getElementById('fVarnada').checked = false;
+        document.getElementById('fBhrigu').checked = false;
+        document.getElementById('fOtherLagna').checked = false;
+        document.getElementById('fAL').checked = false;
+        document.getElementById('fUL').checked = false;
+        document.getElementById('fA2').checked = false;
+        document.getElementById('fA3').checked = false;
+        document.getElementById('fA4').checked = false;
+        document.getElementById('fA5').checked = false;
+        document.getElementById('fA6').checked = false;
+        document.getElementById('fA7').checked = false;
+        document.getElementById('fA8').checked = false;
+        document.getElementById('fA9').checked = false;
+        document.getElementById('fA10').checked = false;
+        document.getElementById('fA11').checked = false;
+        document.getElementById('fVarnadas').checked = false;
+        document.getElementById('fKunda').checked = false;
+        document.getElementById('fMaandi').checked = false;
+        document.getElementById('fGulika').checked = false;
+        document.getElementById('fOtherUpagraha').checked = false;
+        //document.getElementById('fSphutaPrasna').checked = false;
+        document.getElementById('fSphutaYoga').checked = false;
         document.getElementById('fShadbala').checked = false;
         document.getElementById('fVaiseshikamsa').checked = false;
         document.getElementById('fAD').checked = false;
         document.getElementById('fPratyantardasa').checked = false;
+        document.getElementById('fOtherSphuta').checked = false;
         document.getElementById('presetMinimal').classList.add('active-preset');
         document.getElementById('presetPro').classList.remove('active-preset');
         document.getElementById('modeBadge').textContent = '极简模式已启用';
         showToast('✅ 极简模式');
     } else if (mode === 'pro') {
-        document.getElementById('fOuter').checked = true;
-        setGroup(false, 'fBhava', 'fVighati', 'fVarnada', 'fSree', 'fPranapada', 'fIndu', 'fBhrigu');
-        document.getElementById('fMandi').checked = true;
-        document.getElementById('fGulika').checked = true;
-        setGroup(false, 'fSphutaPrasna', 'fSphutaYoga');
-        document.getElementById('fArudhaLagna').checked = true;
-        setGroup(false, 'fBhavaArudha', 'fGrahaArudha', 'fVarnadas', 'fKunda');
-        document.getElementById('fShadbala').checked = true;
-        document.getElementById('fVaiseshikamsa').checked = true;
-        document.getElementById('fAD').checked = false;
-        document.getElementById('fPratyantardasa').checked = false;
+        // 专业模式：选择性开启常用进阶数据，而不是全部
+        document.getElementById('fOuter').checked = true;          // 外行星
+        document.getElementById('fSree').checked = true;          // Sree Lagna
+        document.getElementById('fVarnada').checked = true;       // Varnada Lagna
+        document.getElementById('fBhrigu').checked = true;        // Bhrigu Bindu
+        document.getElementById('fOtherLagna').checked = false;   // 其他辅助Lagna（冷门）
+        document.getElementById('fAL').checked = true;            // AL
+        document.getElementById('fUL').checked = true;            // UL
+        document.getElementById('fA2').checked = true;            // 财富
+        document.getElementById('fA3').checked = false;           // 次要Arudha
+        document.getElementById('fA4').checked = true;            // 家庭
+        document.getElementById('fA5').checked = false;           // 次要Arudha
+        document.getElementById('fA6').checked = false;           // 次要Arudha
+        document.getElementById('fA7').checked = true;            // 伴侣
+        document.getElementById('fA8').checked = false;           // 次要Arudha
+        document.getElementById('fA9').checked = false;           // 次要Arudha
+        document.getElementById('fA10').checked = true;           // 事业
+        document.getElementById('fA11').checked = true;           // 收益
+        document.getElementById('fVarnadas').checked = false;     // 高阶Pada（按需）
+        document.getElementById('fKunda').checked = false;        // 寿元专题（按需）
+        document.getElementById('fMaandi').checked = true;          // Maandi
+        document.getElementById('fGulika').checked = true;         // Gulika
+        document.getElementById('fOtherUpagraha').checked = false; // Other虚星（冷门）
+        //document.getElementById('fSphutaPrasna').checked = false;  // Prasna Marga
+        document.getElementById('fSphutaYoga').checked = false;    // Yoga/Avayoga
+        document.getElementById('fOtherSphuta').checked = false;   // 其他Sphuta（冷门）
+        document.getElementById('fShadbala').checked = true;       // Shadbala
+        document.getElementById('fVaiseshikamsa').checked = true;  // Vaiseshikamsa
+        document.getElementById('fAD').checked = true;             // AD次大运
+        document.getElementById('fPratyantardasa').checked = false; // 小小运（太细）
         document.getElementById('presetPro').classList.add('active-preset');
         document.getElementById('presetMinimal').classList.remove('active-preset');
         document.getElementById('modeBadge').textContent = '专业模式已启用';
@@ -190,6 +245,7 @@ function cleanSingle(type) {
     try {
         if (type === 'full') {
             const keepFullBirth = document.getElementById('fKeepFullBirth').checked;
+            const otherSphutaChecked = document.getElementById('fOtherSphuta').checked;
             const birth = parser.extractBirthInfo(raw, keepFullBirth);
             const blocks = parser.extractBodyLongitudeBlocks(raw, filters);
             let parts = [];
@@ -207,7 +263,13 @@ function cleanSingle(type) {
                     }
                 }
             }
-            const result = parts.join('\n\n') || '（未检测到有效数据）';
+            let result = parts.join('\n\n') || '（未检测到有效数据）';
+
+            // 条件过滤：只有未勾选 fOtherSphuta 时才移除 Rahu Tithi Sphuta
+            if (!otherSphutaChecked) {
+                result = result.split('\n').filter(line => !line.includes('Rahu Tithi Sphuta')).join('\n');
+            }
+
             el.value = result;
             showToast('✅ 清洗本段完成');
             return;
@@ -305,12 +367,18 @@ function mergeAndGenerate() {
     const filters = getFilterState();
     const parser = window.JhoraParser;
 
-    // ===== 新增：读取复选框状态 =====
     const keepFullBirth = document.getElementById('fKeepFullBirth').checked;
+    const otherSphutaChecked = document.getElementById('fOtherSphuta').checked;
 
     try {
-        let result = parser.mergeAll(full, div, dasha, transit, filters, keepFullBirth);  // 新增参数
+        let result = parser.mergeAll(full, div, dasha, transit, filters, keepFullBirth);
         result = result.replace(/(Natal Chart\n)/, `$1Gender: ${genderLabel}\n`);
+
+        // 条件过滤：只有未勾选 fOtherSphuta 时才移除 Rahu Tithi Sphuta
+        if (!otherSphutaChecked) {
+            result = result.split('\n').filter(line => !line.includes('Rahu Tithi Sphuta')).join('\n');
+        }
+
         document.getElementById('outputText').value = result;
         saveHistory(result);
         updateHistoryBadge();
